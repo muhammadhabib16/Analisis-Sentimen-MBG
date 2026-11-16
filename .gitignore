@@ -1,0 +1,64 @@
+# ==============================================================================
+# .gitignore — Dashboard Analisis Sentimen MBG (Python / FastAPI / TensorFlow)
+# ==============================================================================
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python cache & build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing, linting & typecheck caches
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Environment variables & API keys (mis. key LLM untuk pelabelan)
+.env
+.env.*
+!.env.example
+
+# Logs & temporary files
+*.log
+*.tmp
+*.bak
+*.swp
+*~
+tmp/
+
+# IDE & Editor
+.vscode/
+.idea/
+*.sublime-workspace
+
+# OS files (Windows / macOS)
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# Dokumentasi internal
+docs/
+
+# Database lama sisa di root (database aktif berada di artifacts/dashboard_mbg.db)
+/dashboard_mbg.db
+
+# Opsional: hapus tanda '#' di bawah jika tidak ingin meng-commit file model/DB besar ke Git
+# artifacts/*.keras
+# artifacts/*.pkl
+# artifacts/*.db
+# artifacts/*.csv

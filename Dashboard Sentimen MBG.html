@@ -1,0 +1,1427 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Dashboard Sentimen MBG — FastText + BiLSTM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap"
+    />
+    <style>
+      /* ===== NEOBRUTALISM: border hitam tebal, bayangan offset keras, warna datar ===== */
+      :root {
+        --bg: #ece8ff;
+        --card: #ffffff;
+        --ink: #000000;
+        --text: #000000;
+        --muted: #3f3f46;
+        --line: #000000;
+        --field: #000000;
+        --pri: #6d8bff;
+        --tint: #fff3a3;
+        --pos: #3ddc84;
+        --net: #ffd93d;
+        --neg: #ff5c5c;
+        --pos-bg: #3ddc84;
+        --net-bg: #ffd93d;
+        --neg-bg: #ff5c5c;
+        --bw: 3px;
+        --sh: 5px 5px 0 #000;
+        --sh-sm: 3px 3px 0 #000;
+        color-scheme: light;
+        box-sizing: border-box;
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
+      html {
+        scroll-padding-top: env(safe-area-inset-top, 0px);
+      }
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        background-image: radial-gradient(#00000026 1.2px, transparent 1.2px);
+        background-size: 22px 22px;
+        color: var(--text);
+        font:
+          15px/1.55 "Space Grotesk",
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        font-variant-numeric: tabular-nums;
+      }
+      .wrap {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 24px 20px 72px;
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+      }
+
+      /* Header */
+      header.card {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        justify-content: space-between;
+        align-items: center;
+        background: var(--pri);
+      }
+      h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0;
+        line-height: 1.25;
+        letter-spacing: -0.01em;
+      }
+      .note {
+        color: var(--muted);
+        font-size: 0.86rem;
+        margin: 4px 0 0;
+      }
+      header .note {
+        color: #000;
+        font-weight: 500;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        padding: 5px 12px;
+        border: var(--bw) solid #000;
+        background: var(--pos);
+        color: #000;
+        margin-top: 10px;
+        box-shadow: var(--sh-sm);
+      }
+      .badge.off {
+        background: var(--net);
+      }
+      .dot {
+        width: 9px;
+        height: 9px;
+        border: 2px solid #000;
+        background: #fff;
+        flex: none;
+      }
+
+      /* Card & layout */
+      .card {
+        background: var(--card);
+        border: var(--bw) solid #000;
+        border-radius: 0;
+        padding: 24px;
+        box-shadow: var(--sh);
+      }
+      .subcard {
+        background: #fff;
+        border: var(--bw) solid #000;
+        padding: 18px;
+        box-shadow: var(--sh-sm);
+      }
+      .card-head {
+        margin-bottom: 20px;
+        padding-bottom: 14px;
+        border-bottom: var(--bw) solid #000;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 10px;
+      }
+      h2 {
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin: 0;
+        display: inline-block;
+        background: var(--net);
+        border: var(--bw) solid #000;
+        padding: 2px 10px;
+        box-shadow: var(--sh-sm);
+      }
+      .lead {
+        color: var(--muted);
+        font-size: 0.88rem;
+        margin: 10px 0 0;
+        max-width: 65ch;
+      }
+      .cols {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 28px;
+        align-items: start;
+      }
+
+      /* KPI */
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 22px;
+      }
+      .kpi-card {
+        background: var(--pri);
+        border: var(--bw) solid #000;
+        box-shadow: var(--sh);
+        padding: 18px 20px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .kpi-card.pos {
+        background: var(--pos);
+      }
+      .kpi-card.net {
+        background: var(--net);
+      }
+      .kpi-card.neg {
+        background: var(--neg);
+      }
+      .kpi-label {
+        font-size: 0.9rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .kpi-val {
+        font-size: 2.5rem;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        line-height: 1.05;
+      }
+      .kpi-foot {
+        font-size: 0.84rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .kpi-bar {
+        height: 14px;
+        background: #fff;
+        border: var(--bw) solid #000;
+        overflow: hidden;
+      }
+      .kpi-bar i {
+        display: block;
+        height: 100%;
+        background: #000;
+        border-right: var(--bw) solid #000;
+      }
+      .sq {
+        width: 14px;
+        height: 14px;
+        border: var(--bw) solid #000;
+        background: #fff;
+        display: inline-block;
+        flex: none;
+      }
+      .stack-wrap {
+        background: #fff;
+        border: var(--bw) solid #000;
+        box-shadow: var(--sh);
+        padding: 16px 20px;
+      }
+      .stack-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        font-size: 0.86rem;
+        font-weight: 700;
+      }
+      .stack {
+        display: flex;
+        height: 26px;
+        border: var(--bw) solid #000;
+      }
+      .stack i {
+        display: block;
+        height: 100%;
+        border-right: var(--bw) solid #000;
+      }
+      .stack i:last-child {
+        border-right: 0;
+      }
+
+      @media (max-width: 960px) {
+        .kpi-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+      @media (max-width: 860px) {
+        .cols {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (max-width: 520px) {
+        .kpi-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* Tombol & input */
+      .btn {
+        min-height: 38px;
+        padding: 0 16px;
+        border: var(--bw) solid #000;
+        background: #fff;
+        border-radius: 0;
+        font: inherit;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #000;
+        cursor: pointer;
+        box-shadow: var(--sh-sm);
+        transition:
+          transform 0.08s,
+          box-shadow 0.08s;
+      }
+      .btn:hover {
+        background: var(--tint);
+      }
+      .btn:active {
+        transform: translate(3px, 3px);
+        box-shadow: 0 0 0 #000;
+      }
+      .btn[aria-pressed="true"] {
+        background: #000;
+        color: #fff;
+        transform: translate(3px, 3px);
+        box-shadow: 0 0 0 #000;
+      }
+      .btn.p {
+        background: var(--neg);
+      }
+      .btn.p:hover {
+        background: #ff7a7a;
+      }
+      .btn:disabled {
+        color: #71717a;
+        background: #e4e4e7;
+        cursor: not-allowed;
+        box-shadow: none;
+        transform: none;
+      }
+      .seg {
+        display: inline-flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      :focus-visible {
+        outline: 4px solid #000;
+        outline-offset: 3px;
+      }
+      .in {
+        min-height: 38px;
+        border: var(--bw) solid #000;
+        border-radius: 0;
+        padding: 0 12px;
+        font: inherit;
+        font-size: 0.9rem;
+        font-weight: 500;
+        background: #fff;
+        color: #000;
+      }
+      .in:focus {
+        background: var(--tint);
+      }
+      textarea.in {
+        width: 100%;
+        min-height: 104px;
+        padding: 10px 12px;
+        resize: vertical;
+        line-height: 1.5;
+      }
+
+      /* Grafik & word cloud */
+      .leg {
+        display: flex;
+        gap: 18px;
+        flex-wrap: wrap;
+        font-size: 0.86rem;
+        font-weight: 600;
+        margin-bottom: 12px;
+      }
+      .leg span {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .leg i {
+        width: 26px;
+        height: 0;
+        border-top: 5px solid;
+      }
+      .chart {
+        position: relative;
+        height: 290px;
+        border: var(--bw) solid #000;
+        background: #fff;
+        padding: 8px;
+      }
+      .cloud {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 12px;
+        align-items: center;
+        min-height: 210px;
+        align-content: center;
+        justify-content: center;
+        padding: 8px;
+      }
+      .cloud span {
+        font-weight: 700;
+        line-height: 1.2;
+        color: #000;
+        border: var(--bw) solid #000;
+        padding: 1px 9px;
+        box-shadow: var(--sh-sm);
+      }
+      .rk {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .rk li {
+        display: grid;
+        grid-template-columns: 108px 1fr 48px;
+        gap: 10px;
+        align-items: center;
+        font-size: 0.88rem;
+        font-weight: 600;
+      }
+      .rk .t {
+        height: 14px;
+        background: #fff;
+        border: 2px solid #000;
+        overflow: hidden;
+      }
+      .rk .t i {
+        display: block;
+        height: 100%;
+        border-right: 2px solid #000;
+      }
+      .rk em {
+        font-style: normal;
+        text-align: right;
+        font-weight: 700;
+      }
+
+      /* Inferensi & metrik */
+      .res {
+        margin-top: 20px;
+        padding: 16px;
+        background: var(--tint);
+        border: var(--bw) solid #000;
+        box-shadow: var(--sh-sm);
+      }
+      .lab {
+        font-size: 1.55rem;
+        font-weight: 700;
+        line-height: 1.2;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .bar {
+        display: grid;
+        grid-template-columns: 68px 1fr 56px;
+        gap: 10px;
+        align-items: center;
+        font-size: 0.88rem;
+        font-weight: 600;
+        margin: 8px 0;
+      }
+      .bar .t {
+        height: 14px;
+        background: #fff;
+        border: 2px solid #000;
+        overflow: hidden;
+      }
+      .bar .t i {
+        display: block;
+        height: 100%;
+        border-right: 2px solid #000;
+      }
+      .bar span:last-child {
+        text-align: right;
+        font-weight: 700;
+      }
+      .acc-box {
+        display: flex;
+        align-items: baseline;
+        gap: 14px;
+        flex-wrap: wrap;
+        padding: 14px 16px;
+        background: var(--pos);
+        border: var(--bw) solid #000;
+        box-shadow: var(--sh-sm);
+        margin-bottom: 20px;
+      }
+      .acc {
+        font-size: 2.6rem;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        line-height: 1;
+      }
+      .acc-box .note {
+        color: #000;
+        font-weight: 600;
+      }
+      .cm {
+        display: grid;
+        grid-template-columns: 72px repeat(3, 1fr);
+        gap: 6px;
+        font-size: 0.88rem;
+        text-align: center;
+        margin-top: 10px;
+      }
+      .cm div {
+        padding: 10px 6px;
+        border: 2px solid #000;
+        font-weight: 700;
+      }
+      .cm .h {
+        padding: 6px;
+        background: transparent;
+        border: 0;
+      }
+      .kv {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 8px 16px;
+        font-size: 0.84rem;
+        margin: 20px 0 0;
+        padding-top: 16px;
+        border-top: var(--bw) solid #000;
+      }
+      .kv dt {
+        font-weight: 700;
+      }
+      .kv dd {
+        margin: 0;
+      }
+      code {
+        background: var(--tint);
+        border: 2px solid #000;
+        padding: 0 5px;
+        font-size: 0.85em;
+      }
+      .batch-box {
+        margin-top: 24px;
+        padding: 16px;
+        background: #fff;
+        border: var(--bw) dashed #000;
+      }
+
+      /* Tabel */
+      .scroll {
+        overflow-x: auto;
+        border: var(--bw) solid #000;
+        background: #fff;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.88rem;
+        background: #fff;
+      }
+      thead th {
+        background: var(--net);
+        font-size: 0.84rem;
+        font-weight: 700;
+        padding: 11px 14px;
+        border-bottom: var(--bw) solid #000;
+        white-space: nowrap;
+        text-align: left;
+      }
+      thead th.num {
+        text-align: right;
+      }
+      td {
+        padding: 11px 14px;
+        border-bottom: 2px solid #000;
+        vertical-align: top;
+      }
+      tr:last-child td {
+        border-bottom: 0;
+      }
+      tbody tr:nth-child(even) td {
+        background: #f6f4ff;
+      }
+      tbody tr:hover td {
+        background: var(--tint);
+      }
+      .col-comment {
+        min-width: 260px;
+        max-width: 440px;
+        line-height: 1.5;
+        word-break: break-word;
+      }
+      .num {
+        text-align: right;
+        white-space: nowrap;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 10px;
+        border: 2px solid #000;
+        font-size: 0.8rem;
+        font-weight: 700;
+        white-space: nowrap;
+        color: #000;
+      }
+      .pill.Positif {
+        background: var(--pos);
+      }
+      .pill.Netral {
+        background: var(--net);
+      }
+      .pill.Negatif {
+        background: var(--neg);
+      }
+
+      .bar-tools {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+        align-items: center;
+      }
+      .pager {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 16px;
+      }
+      .sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .btn {
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <!-- HEADER -->
+      <header class="card">
+        <div>
+          <h1>
+            Dashboard Sentimen Publik — Program Makan Bergizi Gratis (MBG)
+          </h1>
+          <p class="note">
+            Klasifikasi opini masyarakat menggunakan arsitektur
+            <b>Pure FastText Subword Embedding + BiLSTM (Dual Global Pooling)</b>.
+          </p>
+          <div id="apiBadge" class="badge off">
+            <span class="dot"></span
+            ><span id="apiText">Menghubungkan ke Backend FastAPI...</span>
+          </div>
+        </div>
+        <div class="seg" role="group" aria-label="Rentang waktu" id="rng">
+          <button class="btn" data-r="7" aria-pressed="false">7 hari</button>
+          <button class="btn" data-r="14" aria-pressed="false">14 hari</button>
+          <button class="btn" data-r="30" aria-pressed="false">30 hari</button>
+          <button class="btn" data-r="0" aria-pressed="true">Semua Data</button>
+        </div>
+      </header>
+
+      <!-- KPI -->
+      <div class="kpi-grid">
+        <div class="kpi-card pri">
+          <div class="kpi-label">
+            <span>Total Komentar</span><span class="sq"></span>
+          </div>
+          <div class="kpi-val" id="total">11.202</div>
+          <div class="kpi-foot">
+            <span id="totlab">komentar unik di database</span>
+          </div>
+        </div>
+        <div class="kpi-card pos">
+          <div class="kpi-label">
+            <span>Sentimen Positif</span><span class="sq"></span>
+          </div>
+          <div class="kpi-val" id="kpiPosCount">-</div>
+          <div>
+            <div class="kpi-bar"><i id="kpiPosBar" style="width: 0%"></i></div>
+            <div class="kpi-foot" style="margin-top: 6px">
+              <span>Proporsi Positif</span><b id="kpiPosPct">-</b>
+            </div>
+          </div>
+        </div>
+        <div class="kpi-card net">
+          <div class="kpi-label">
+            <span>Sentimen Netral</span><span class="sq"></span>
+          </div>
+          <div class="kpi-val" id="kpiNetCount">-</div>
+          <div>
+            <div class="kpi-bar"><i id="kpiNetBar" style="width: 0%"></i></div>
+            <div class="kpi-foot" style="margin-top: 6px">
+              <span>Proporsi Netral</span><b id="kpiNetPct">-</b>
+            </div>
+          </div>
+        </div>
+        <div class="kpi-card neg">
+          <div class="kpi-label">
+            <span>Sentimen Negatif</span><span class="sq"></span>
+          </div>
+          <div class="kpi-val" id="kpiNegCount">-</div>
+          <div>
+            <div class="kpi-bar"><i id="kpiNegBar" style="width: 0%"></i></div>
+            <div class="kpi-foot" style="margin-top: 6px">
+              <span>Proporsi Negatif</span><b id="kpiNegPct">-</b>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BAR PROPORSI -->
+      <div class="stack-wrap">
+        <div class="stack-head">
+          <span>Distribusi Proporsi Sentimen Keseluruhan</span>
+          <span>Positif · Netral · Negatif</span>
+        </div>
+        <div class="stack" id="stack" aria-hidden="true"></div>
+      </div>
+
+      <!-- TREN -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2>Perubahan Sentimen per Hari</h2>
+            <p class="lead">
+              Tren jumlah komentar harian menurut tanggal publikasi dan label
+              prediksi model BiLSTM.
+            </p>
+          </div>
+          <div class="leg" id="leg" style="margin-bottom: 0"></div>
+        </div>
+        <div class="chart">
+          <canvas
+            id="cTrend"
+            role="img"
+            aria-label="Grafik garis jumlah komentar per hari untuk tiap sentimen"
+          ></canvas>
+        </div>
+      </section>
+
+      <!-- WORD CLOUD -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2>Kata yang Paling Sering Muncul</h2>
+            <p class="lead">
+              Pilih kelas sentimen untuk melihat 15 kata dominan dari komentar
+              masyarakat.
+            </p>
+          </div>
+          <div
+            class="seg"
+            id="wtabs"
+            role="group"
+            aria-label="Pilih sentimen"
+          ></div>
+        </div>
+        <div class="cols">
+          <div class="subcard">
+            <div
+              class="note"
+              style="font-weight: 700; margin-bottom: 8px; color: #000"
+            >
+              Word Cloud Kata Dominan
+            </div>
+            <div class="cloud" id="cloud"></div>
+          </div>
+          <div class="subcard">
+            <div
+              class="note"
+              style="font-weight: 700; margin-bottom: 10px; color: #000"
+            >
+              Peringkat 15 Kata Teratas
+            </div>
+            <ol class="rk" id="rk"></ol>
+          </div>
+        </div>
+      </section>
+
+      <!-- UJI KOMENTAR & PERFORMA MODEL -->
+      <div class="cols">
+        <section class="card">
+          <div class="card-head">
+            <div>
+              <h2>Uji Komentar Baru (Live BiLSTM Inference)</h2>
+              <p class="lead">
+                Ketik komentar atau ambil contoh acak langsung dari dataset CSV
+                untuk diprediksi oleh model.
+              </p>
+            </div>
+          </div>
+          <label for="inp" class="sr">Komentar</label>
+          <textarea
+            class="in"
+            id="inp"
+            maxlength="1000"
+            placeholder="Ketik komentar atau klik Load Komentar untuk mengambil komentar acak dari dataset CSV..."
+          ></textarea>
+          <div class="bar-tools" style="margin: 14px 0 0">
+            <button class="btn" id="loadRandom">Load Komentar</button>
+            <button class="btn p" id="go">Prediksi sentimen</button>
+          </div>
+          <div class="res" id="res" aria-live="polite" hidden>
+            <p class="note" id="clean" style="margin: 0 0 8px; color: #000"></p>
+            <div class="lab" id="lab"></div>
+            <div id="probs" style="margin-top: 10px"></div>
+          </div>
+
+          <div class="batch-box">
+            <h2 style="font-size: 1rem; margin-bottom: 4px">
+              Prediksi Massal via CSV (Batch Prediction)
+            </h2>
+            <p class="note" style="margin: 10px 0">
+              Unggah file <code>.csv</code> dengan kolom <code>comment</code> /
+              <code>komentar</code> (maks. 5.000 baris).
+            </p>
+            <div class="bar-tools" style="margin-bottom: 0">
+              <input
+                class="in"
+                type="file"
+                id="csvFile"
+                accept=".csv"
+                style="padding: 5px 8px; flex: 1; min-width: 180px"
+              />
+              <button class="btn p" id="btnBatch">Proses CSV</button>
+              <button class="btn" id="btnDlBatch" hidden>
+                Unduh Hasil CSV
+              </button>
+            </div>
+            <p
+              class="note"
+              id="batchInfo"
+              style="margin-top: 10px; color: #000"
+            ></p>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <div>
+              <h2>Performa Model FastText + BiLSTM</h2>
+              <p class="lead">
+                Evaluasi pada 10% Data Uji (Test Split) yang terisolasi dari
+                data latih.
+              </p>
+            </div>
+          </div>
+          <div class="acc-box">
+            <div class="acc" id="acc">81,3%</div>
+            <div class="note" id="acclab" style="margin: 0">
+              akurasi pada 1.121 data uji
+            </div>
+          </div>
+          <div class="scroll">
+            <table id="rep">
+              <caption class="sr">
+                Classification report
+              </caption>
+            </table>
+          </div>
+          <p style="margin: 20px 0 6px; font-weight: 700">
+            Confusion Matrix (Baris: Aktual, Kolom: Prediksi)
+          </p>
+          <div class="cm" id="cm"></div>
+          <div class="chart" style="height: 190px; margin-top: 22px">
+            <canvas
+              id="cTrain"
+              role="img"
+              aria-label="Kurva akurasi latih dan validasi per epoch"
+            ></canvas>
+          </div>
+          <dl class="kv">
+            <dt>Embedding</dt>
+            <dd>
+              Pure FastText Skip-Gram (sg=1, 128 dimensi, tanpa Lexicon Prior)
+            </dd>
+            <dt>Arsitektur</dt>
+            <dd>
+              SpatialDropout1D(0.20) &rarr; BiLSTM 128 &rarr; Dual Global
+              Pooling (Avg+Max) &rarr; Dense 64 &rarr; Dropout(0.30) &rarr; Softmax 3 kelas
+            </dd>
+            <dt>Fitur NLP</dt>
+            <dd>
+              Normalisasi Slang &amp; Syntactic Negation Binding (tanpa kamus &amp; tanpa tag <code>ironi_</code>)
+            </dd>
+            <dt>Optimizer</dt>
+            <dd>
+              Adam (lr 0,001 + ReduceLROnPlateau), Batch 32 &amp; Balanced Class
+              Weights
+            </dd>
+          </dl>
+        </section>
+      </div>
+
+      <!-- TABEL KOMENTAR -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2>Daftar Komentar Masyarakat</h2>
+            <p class="lead">
+              Cari, saring berdasarkan sentimen, dan urutkan komentar asli dari
+              database SQLite.
+            </p>
+          </div>
+        </div>
+        <div class="bar-tools">
+          <input
+            class="in"
+            id="q"
+            type="search"
+            placeholder="Cari kata kunci komentar..."
+            aria-label="Cari kata kunci"
+            style="flex: 1; min-width: 200px"
+          />
+          <select class="in" id="fs" aria-label="Saring sentimen">
+            <option value="">Semua sentimen</option>
+            <option value="Positif">Positif</option>
+            <option value="Netral">Netral</option>
+            <option value="Negatif">Negatif</option>
+          </select>
+          <select class="in" id="so" aria-label="Urutkan">
+            <option value="d">Terbaru</option>
+            <option value="l">Likes terbanyak</option>
+            <option value="c">Confidence tertinggi</option>
+          </select>
+          <button class="btn" id="csv">Unduh CSV Halaman Ini</button>
+          <span class="note" id="st" aria-live="polite"></span>
+        </div>
+        <div class="scroll"><table id="tb"></table></div>
+        <div class="pager">
+          <span
+            class="note"
+            id="pinfo"
+            style="color: #000; font-weight: 600"
+          ></span
+          ><span class="seg"
+            ><button class="btn" id="pv">Sebelumnya</button
+            ><button class="btn" id="nx">Berikutnya</button></span
+          >
+        </div>
+      </section>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <script>
+      const API_BASE =
+        location.protocol === "file:" ? "http://127.0.0.1:8000" : "";
+      const S = ["Positif", "Netral", "Negatif"];
+      const COL = { Positif: "#3ddc84", Netral: "#ffd93d", Negatif: "#ff5c5c" };
+      const $ = (id) => document.getElementById(id);
+      const fmt = (n) => Number(n || 0).toLocaleString("id-ID");
+      const pct = (x) =>
+        Number(x || 0)
+          .toFixed(1)
+          .replace(".", ",") + "%";
+
+      Chart.defaults.font.family = '"Space Grotesk",system-ui,sans-serif';
+      Chart.defaults.font.weight = "600";
+      Chart.defaults.color = "#000";
+      const ch = {};
+      function mk(id, cfg) {
+        if (ch[id]) ch[id].destroy();
+        cfg.options = Object.assign(
+          { responsive: true, maintainAspectRatio: false },
+          cfg.options,
+        );
+        for (const a in cfg.options.scales || {})
+          cfg.options.scales[a].grid = { color: "#00000026" };
+        ch[id] = new Chart($(id), cfg);
+      }
+
+      let rng = 0,
+        wt = "Negatif",
+        pg = 1,
+        totalPages = 1,
+        currentRows = [],
+        topWordsCache = null,
+        batchResultRows = [];
+
+      const FALLBACK_METRICS = {
+        test_accuracy: 0.8127,
+        confusion_matrix: [
+          [434, 33, 43],
+          [37, 190, 16],
+          [57, 24, 287],
+        ],
+        training_history: {
+          accuracy: [0.6302, 0.7594, 0.8469, 0.8953, 0.9248, 0.9488, 0.9585, 0.971, 0.9747, 0.9759],
+          val_accuracy: [0.6973, 0.7589, 0.8116, 0.8152, 0.8116, 0.8205, 0.8, 0.8116, 0.8054, 0.8062],
+        },
+      };
+
+      async function apiFetch(path, options) {
+        const res = await fetch(API_BASE + path, options);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return await res.json();
+      }
+
+      async function loadSummaryAndTrend() {
+        try {
+          const [sumData, trendData] = await Promise.all([
+            apiFetch(`/api/summary?days=${rng}`),
+            apiFetch(`/api/trend?days=${rng || 30}`),
+          ]);
+          $("apiBadge").className = "badge";
+          $("apiText").textContent =
+            "Terhubung ke FastAPI (Model FastText + BiLSTM Aktif)";
+
+          const all = sumData.total || 0;
+          const tot = sumData.counts || { Positif: 0, Netral: 0, Negatif: 0 };
+          $("total").textContent = fmt(all);
+          $("totlab").textContent =
+            rng > 0
+              ? `komentar dalam ${rng} hari terakhir`
+              : "total komentar unik di database";
+
+          const pPos = all ? (tot.Positif / all) * 100 : 0;
+          const pNet = all ? (tot.Netral / all) * 100 : 0;
+          const pNeg = all ? (tot.Negatif / all) * 100 : 0;
+
+          $("kpiPosCount").textContent = fmt(tot.Positif);
+          $("kpiPosPct").textContent = pct(pPos);
+          $("kpiPosBar").style.width = pPos + "%";
+
+          $("kpiNetCount").textContent = fmt(tot.Netral);
+          $("kpiNetPct").textContent = pct(pNet);
+          $("kpiNetBar").style.width = pNet + "%";
+
+          $("kpiNegCount").textContent = fmt(tot.Negatif);
+          $("kpiNegPct").textContent = pct(pNeg);
+          $("kpiNegBar").style.width = pNeg + "%";
+
+          $("stack").innerHTML = S.map(
+            (s) =>
+              `<i title="${s}: ${fmt(tot[s])}" style="width:${all ? (tot[s] / all) * 100 : 0}%;background:${COL[s]}"></i>`,
+          ).join("");
+
+          $("leg").innerHTML = S.map(
+            (s) =>
+              `<span><i style="border-color:${COL[s]};border-top-style:${s === "Netral" ? "dashed" : "solid"}"></i>${s}</span>`,
+          ).join("");
+          const series = trendData.series || [];
+          mk("cTrend", {
+            type: "line",
+            data: {
+              labels: series.map((x) => {
+                const d = new Date(x.date);
+                return isNaN(d)
+                  ? x.date
+                  : d.toLocaleDateString("id-ID", {
+                      day: "numeric",
+                      month: "short",
+                    });
+              }),
+              datasets: S.map((s) => ({
+                label: s,
+                data: series.map((x) => x[s]),
+                borderColor: COL[s],
+                backgroundColor: COL[s],
+                pointBorderColor: "#000",
+                pointBorderWidth: 2,
+                tension: 0.3,
+                pointRadius: series.length > 16 ? 3 : 5,
+                borderWidth: 4,
+                borderDash: s === "Netral" ? [6, 4] : [],
+              })),
+            },
+            options: {
+              interaction: { mode: "index", intersect: false },
+              plugins: { legend: { display: false } },
+              scales: {
+                x: { ticks: { maxTicksLimit: 10 } },
+                y: { beginAtZero: true },
+              },
+            },
+          });
+        } catch (err) {
+          $("apiBadge").className = "badge off";
+          $("apiText").textContent =
+            "Mode Offline (Jalankan `python app.py` untuk koneksi langsung ke BiLSTM & SQLite)";
+        }
+      }
+
+      async function loadTopWords() {
+        $("wtabs").innerHTML = S.map(
+          (s) =>
+            `<button class="btn" data-s="${s}" aria-pressed="${s === wt}">${s}</button>`,
+        ).join("");
+        try {
+          if (!topWordsCache) {
+            topWordsCache = await apiFetch("/api/top-words?limit=15");
+          }
+          const list = (topWordsCache[wt] || []).map((item) => [
+            item.word,
+            item.count,
+          ]);
+          if (!list.length) return;
+          const mx = list[0][1],
+            mn = list[list.length - 1][1];
+          $("cloud").innerHTML = [...list]
+            .sort((a, b) => (a[0] < b[0] ? -1 : 1))
+            .map(
+              ([t, n]) =>
+                `<span title="${fmt(n)} kali" style="font-size:${(0.95 + ((n - mn) / Math.max(1, mx - mn)) * 1.45).toFixed(2)}rem;background:${COL[wt]}">${t}</span>`,
+            )
+            .join("");
+          $("rk").innerHTML = list
+            .map(
+              ([t, n]) =>
+                `<li><span>${t}</span><span class="t"><i style="width:${(n / mx) * 100}%;background:${COL[wt]}"></i></span><em>${fmt(n)}</em></li>`,
+            )
+            .join("");
+        } catch (e) {}
+      }
+
+      function escapeHtml(str) {
+        return String(str ?? "").replace(
+          /[&<>"']/g,
+          (m) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[m],
+        );
+      }
+
+      async function loadCommentsTable() {
+        const q = encodeURIComponent($("q").value.trim());
+        const f = encodeURIComponent($("fs").value);
+        const o = encodeURIComponent($("so").value);
+        try {
+          const data = await apiFetch(
+            `/api/comments?q=${q}&sentiment=${f}&sort=${o}&days=${rng}&page=${pg}&page_size=8`,
+          );
+          currentRows = data.items || [];
+          totalPages = data.total_pages || 1;
+          pg = data.page || 1;
+
+          $("tb").innerHTML =
+            '<thead><tr><th scope="col">Author</th><th scope="col">Komentar</th><th scope="col">Sentimen</th><th scope="col" class="num">Confidence</th><th scope="col">Tanggal</th><th scope="col" class="num">Likes</th></tr></thead><tbody>' +
+            (currentRows
+              .map((r) => {
+                const tgl = r.published_at ? r.published_at.slice(0, 10) : "-";
+                return `<tr>
+          <td style="white-space:nowrap;font-weight:600">${escapeHtml(r.author || "@anonim")}</td>
+          <td class="col-comment">${escapeHtml(r.comment_asli)}</td>
+          <td><span class="pill ${r.sentimen}">${r.sentimen}</span></td>
+          <td class="num">${pct(r.confidence_pct)}</td>
+          <td style="white-space:nowrap">${tgl}</td>
+          <td class="num">${fmt(r.likes)}</td>
+        </tr>`;
+              })
+              .join("") ||
+              '<tr><td colspan="6" style="text-align:center;padding:24px">Tidak ada komentar yang cocok dengan saringan ini. <button class="btn" id="rs" style="margin-left:8px">Hapus saringan</button></td></tr>') +
+            "</tbody>";
+
+          $("pinfo").textContent =
+            `${fmt(data.total)} komentar ditemukan — halaman ${pg} dari ${fmt(totalPages)}`;
+          $("pv").disabled = pg <= 1;
+          $("nx").disabled = pg >= totalPages;
+        } catch (e) {}
+      }
+
+      function renderModelMetrics(m) {
+        const REP = m.confusion_matrix || FALLBACK_METRICS.confusion_matrix;
+        const N = ["Negatif", "Netral", "Positif"];
+        let h =
+          '<thead><tr><th scope="col">Kelas</th><th scope="col" class="num">Precision</th><th scope="col" class="num">Recall</th><th scope="col" class="num">F1-Score</th><th scope="col" class="num">Support</th></tr></thead><tbody>';
+        let tp = 0,
+          T = 0;
+        N.forEach((nm, i) => {
+          const sc = REP[i].reduce((a, b) => a + b, 0);
+          const pc = REP.reduce((a, r) => a + r[i], 0);
+          const pr = REP[i][i] / pc;
+          const rc = REP[i][i] / sc;
+          const f1 = (2 * pr * rc) / (pr + rc);
+          tp += REP[i][i];
+          T += sc;
+          h += `<tr><td><span class="pill ${nm}">${nm}</span></td><td class="num">${pr.toFixed(4)}</td><td class="num">${rc.toFixed(4)}</td><td class="num">${f1.toFixed(4)}</td><td class="num">${fmt(sc)}</td></tr>`;
+        });
+        h += "</tbody>";
+        $("rep").innerHTML = h;
+
+        const hist = m.training_history || FALLBACK_METRICS.training_history;
+        const peakVal =
+          hist.val_accuracy && hist.val_accuracy.length
+            ? Math.max(...hist.val_accuracy) * 100
+            : 0;
+        $("acc").textContent = pct((m.test_accuracy || tp / T) * 100);
+        $("acclab").textContent =
+          `akurasi pada ${fmt(T)} data uji (Peak Validation Accuracy: ${pct(peakVal)})`;
+
+        const mx = Math.max(...REP.flat());
+        let g =
+          "<div></div>" + N.map((n) => `<div class="h">${n}</div>`).join("");
+        REP.forEach((r, i) => {
+          g +=
+            `<div class="h" style="text-align:right">${N[i]}</div>` +
+            r
+              .map(
+                (v) =>
+                  `<div style="background:rgba(0,0,0,${(0.06 + (0.94 * v) / mx).toFixed(2)});color:${v / mx > 0.4 ? "#fff" : "#000"}">${v}</div>`,
+              )
+              .join("");
+        });
+        $("cm").innerHTML = g;
+
+        mk("cTrain", {
+          type: "line",
+          data: {
+            labels: hist.accuracy.map((_, i) => "Epoch " + (i + 1)),
+            datasets: [
+              {
+                label: "Train Accuracy",
+                data: hist.accuracy,
+                borderColor: "#000",
+                backgroundColor: "#6d8bff",
+                pointBorderColor: "#000",
+                tension: 0.3,
+                pointRadius: 4,
+                borderWidth: 4,
+              },
+              {
+                label: "Val Accuracy",
+                data: hist.val_accuracy,
+                borderColor: "#ff5c5c",
+                backgroundColor: "#ff5c5c",
+                pointBorderColor: "#000",
+                tension: 0.3,
+                pointRadius: 4,
+                borderWidth: 4,
+                borderDash: [6, 4],
+              },
+            ],
+          },
+          options: {
+            plugins: {
+              legend: { position: "bottom", labels: { boxWidth: 18 } },
+            },
+            scales: { y: { min: 0.5, max: 1.0 } },
+          },
+        });
+      }
+
+      async function loadMetrics() {
+        try {
+          const m = await apiFetch("/api/model-metrics");
+          renderModelMetrics(m);
+        } catch (e) {
+          renderModelMetrics(FALLBACK_METRICS);
+        }
+      }
+
+      $("loadRandom").onclick = async () => {
+        $("loadRandom").disabled = true;
+        $("loadRandom").textContent = "Mengambil...";
+        try {
+          const data = await apiFetch("/api/random-comments?limit=1");
+          const item = (data.items || [])[0];
+          if (item && item.comment_asli) {
+            $("inp").value = item.comment_asli;
+            $("res").hidden = true;
+          }
+        } catch (e) {
+          alert(
+            "Gagal mengambil komentar acak. Pastikan server FastAPI (`python app.py`) sedang berjalan.",
+          );
+        } finally {
+          $("loadRandom").disabled = false;
+          $("loadRandom").textContent = "Load Komentar";
+        }
+      };
+
+      async function runPredict() {
+        const v = $("inp").value.trim();
+        if (!v) {
+          $("inp").focus();
+          return;
+        }
+        $("go").disabled = true;
+        $("go").textContent = "Memproses BiLSTM...";
+        try {
+          const r = await apiFetch("/api/predict", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: v }),
+          });
+          $("res").hidden = false;
+          $("clean").textContent = "Teks diproses: " + r.teks_bersih;
+          const s = r.sentimen;
+          $("lab").innerHTML =
+            `<span class="pill ${s}" style="font-size:1.1rem;padding:5px 14px">${s}</span> <span class="note" style="margin:0;color:#000;font-weight:600">${pct(r.confidence_pct)} yakin (BiLSTM)</span>`;
+          $("probs").innerHTML = S.map((x) => {
+            const p = (r.probabilitas[x] || 0) * 100;
+            return `<div class="bar"><span>${x}</span><span class="t"><i style="width:${p}%;background:${COL[x]}"></i></span><span>${pct(p)}</span></div>`;
+          }).join("");
+        } catch (e) {
+          alert(
+            "Gagal menghubungi endpoint /api/predict. Pastikan server FastAPI (`python app.py`) sedang berjalan.",
+          );
+        } finally {
+          $("go").disabled = false;
+          $("go").textContent = "Prediksi sentimen";
+        }
+      }
+
+      $("btnBatch").onclick = async () => {
+        const fileInput = $("csvFile");
+        if (!fileInput.files.length) {
+          alert("Pilih file CSV terlebih dahulu!");
+          return;
+        }
+        const formData = new FormData();
+        formData.append("file", fileInput.files[0]);
+        $("btnBatch").disabled = true;
+        $("batchInfo").textContent =
+          "Sedang memprediksi ribuan komentar dengan model FastText + BiLSTM...";
+        try {
+          const res = await fetch(API_BASE + "/api/predict-batch", {
+            method: "POST",
+            body: formData,
+          });
+          if (!res.ok) throw new Error(await res.text());
+          const data = await res.json();
+          batchResultRows = data.items || [];
+          $("batchInfo").innerHTML =
+            `Berhasil memprediksi <b>${fmt(data.total_predicted)}</b> komentar dari kolom <code>${data.text_column}</code>: ` +
+            `<b>Positif: ${fmt(data.summary.Positif)}</b> | <b>Netral: ${fmt(data.summary.Netral)}</b> | <b>Negatif: ${fmt(data.summary.Negatif)}</b>`;
+          $("btnDlBatch").hidden = false;
+        } catch (err) {
+          $("batchInfo").textContent = "Gagal memproses CSV: " + err.message;
+        } finally {
+          $("btnBatch").disabled = false;
+        }
+      };
+
+      $("btnDlBatch").onclick = () => {
+        if (!batchResultRows.length) return;
+        const header =
+          "teks_asli,teks_bersih,sentimen,confidence_pct,prob_negatif,prob_netral,prob_positif\n";
+        const body = batchResultRows
+          .map(
+            (r) =>
+              `"${String(r.teks_asli).replace(/"/g, '""')}","${String(r.teks_bersih).replace(/"/g, '""')}",${r.sentimen},${r.confidence_pct},${r.prob_negatif},${r.prob_netral},${r.prob_positif}`,
+          )
+          .join("\n");
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(
+          new Blob([header + body], { type: "text/csv;charset=utf-8;" }),
+        );
+        a.download = "hasil_prediksi_batch_mbg.csv";
+        a.click();
+      };
+
+      $("rng").onclick = (e) => {
+        const r = e.target.dataset.r;
+        if (r === undefined) return;
+        rng = +r;
+        pg = 1;
+        [...$("rng").children].forEach((b) =>
+          b.setAttribute("aria-pressed", b === e.target),
+        );
+        loadSummaryAndTrend();
+        loadCommentsTable();
+      };
+      $("wtabs").onclick = (e) => {
+        if (e.target.dataset.s) {
+          wt = e.target.dataset.s;
+          loadTopWords();
+        }
+      };
+      ["q", "fs", "so"].forEach(
+        (i) =>
+          ($(i).oninput = () => {
+            pg = 1;
+            loadCommentsTable();
+          }),
+      );
+      $("tb").onclick = (e) => {
+        if (e.target.id === "rs") {
+          $("q").value = "";
+          $("fs").value = "";
+          pg = 1;
+          loadCommentsTable();
+        }
+      };
+      $("pv").onclick = () => {
+        if (pg > 1) {
+          pg--;
+          loadCommentsTable();
+        }
+      };
+      $("nx").onclick = () => {
+        if (pg < totalPages) {
+          pg++;
+          loadCommentsTable();
+        }
+      };
+      $("go").onclick = runPredict;
+      $("csv").onclick = () => {
+        const t =
+          "author,komentar,sentimen,confidence,tanggal,likes\n" +
+          currentRows
+            .map(
+              (r) =>
+                `"${r.author || ""}","${String(r.comment_asli).replace(/"/g, '""')}",${r.sentimen},${r.confidence_pct},${(r.published_at || "").slice(0, 10)},${r.likes}`,
+            )
+            .join("\n");
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(new Blob([t], { type: "text/csv" }));
+        a.download = "komentar_mbg.csv";
+        a.click();
+        $("st").textContent = currentRows.length + " baris diunduh";
+      };
+
+      loadSummaryAndTrend();
+      loadTopWords();
+      loadCommentsTable();
+      loadMetrics();
+    </script>
+  </body>
+</html>
