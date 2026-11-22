@@ -11,18 +11,22 @@
 
 import argparse
 import os
+import sys
 from functools import lru_cache
 
 import pandas as pd
 
-from text_preprocessing import (
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) if '__file__' in globals() else os.getcwd()
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
+from ml.text_preprocessing import (
     LABEL_MAPPING,
     NEGATION_WORDS,
     clean_text,
     clean_text_basic,
 )
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else os.getcwd()
 DATASET_DIR = os.path.join(BASE_DIR, 'sentimen mbg dataset')
 KAMUS_DIR = os.path.join(BASE_DIR, 'kamus')
 DEFAULT_OUTPUT_PATH = os.path.join(DATASET_DIR, 'dataset_labeled.csv')
@@ -281,7 +285,7 @@ def run_labeling(output_path: str = DEFAULT_OUTPUT_PATH) -> pd.DataFrame:
     print("\nDistribusi Kelas Sentimen:")
     print(df_out['sentiment_label'].value_counts())
     print(f"\nDataset berlabel disimpan di: {output_path}")
-    print("Langkah berikutnya: jalankan `python script.py` untuk melatih model murni dari dataset ini.")
+    print("Langkah berikutnya: jalankan `python ml/script.py` untuk melatih model murni dari dataset ini.")
     return df_out
 
 

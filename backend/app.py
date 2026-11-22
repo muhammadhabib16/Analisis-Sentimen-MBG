@@ -9,22 +9,30 @@ import os
 import pickle
 import re
 import sqlite3
+import sys
 from collections import Counter
 from contextlib import asynccontextmanager
 from typing import Optional
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
 
 import numpy as np
 import pandas as pd
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from tensorflow.keras.models import load_model
+from keras.models import load_model
 
-from script import CFG, ID_TO_LABEL, clean_text, predict_sentiment
+from ml.script import CFG, ID_TO_LABEL, clean_text, predict_sentiment
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 HTML_PATH = os.path.join(BASE_DIR, "Dashboard Sentimen MBG.html")
+FRONTEND_DIST_DIR = os.path.join(BASE_DIR, "frontend", "dist")
+FRONTEND_ASSETS_DIR = os.path.join(FRONTEND_DIST_DIR, "assets")
+FRONTEND_INDEX_PATH = os.path.join(FRONTEND_DIST_DIR, "index.html")
 
 # State global untuk menyimpan model & tokenizer di memori selama server berjalan
 ml_state = {
@@ -54,7 +62,7 @@ async def lifespan(app: FastAPI):
             ml_state["tokenizer"] = pickle.load(f)
         print("Model dan Tokenizer berhasil dimuat! Server siap menerima request.")
     else:
-        print("[PERINGATAN] File model/tokenizer belum ditemukan. Jalankan `python script.py` terlebih dahulu.")
+        print("[PERINGATAN] File model/tokenizer belum ditemukan. Jalankan `python ml/script.py` terlebih dahulu.")
     print("=" * 70)
     yield
     ml_state.clear()
@@ -76,12 +84,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+if os.path.isdir(FRONTEND_ASSETS_DIR):
+    app.mount("/assets", StaticFiles(directory=FRONTEND_ASSETS_DIR), name="frontend-assets")
+
 
 def get_db_connection() -> sqlite3.Connection:
     if not os.path.exists(CFG.dashboard_db_path):
         raise HTTPException(
             status_code=500,
-            detail="Database belum tersedia. Jalankan `python script.py` terlebih dahulu."
+            detail="Database belum tersedia. Jalankan `python ml/script.py` terlebih dahulu."
         )
     conn = sqlite3.connect(CFG.dashboard_db_path)
     conn.row_factory = sqlite3.Row
@@ -115,10 +126,12 @@ class PredictRequest(BaseModel):
 # ==============================================================================
 @app.get("/", response_class=HTMLResponse)
 def serve_dashboard():
-    """Menampilkan halaman web Dashboard Sentimen MBG."""
+    """Menampilkan halaman web Dashboard Sentimen MBG (prioritas build React Vite, fallback HTML statis)."""
+    if os.path.exists(FRONTEND_INDEX_PATH):
+        return FileResponse(FRONTEND_INDEX_PATH)
     if os.path.exists(HTML_PATH):
         return FileResponse(HTML_PATH)
-    return HTMLResponse("<h1>File 'Dashboard Sentimen MBG.html' tidak ditemukan.</h1>", status_code=404)
+    return HTMLResponse("<h1>Frontend Dashboard tidak ditemukan.</h1>", status_code=404)
 
 
 # ==============================================================================
@@ -412,4 +425,4 @@ async def predict_batch_csv(file: UploadFile = File(...)):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=False)
+    uvicorn.run(app, host="127.0.0.1", port=8000, reload=False)

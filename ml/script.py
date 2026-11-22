@@ -9,7 +9,12 @@ import json
 import os
 import pickle
 import sqlite3
+import sys
 from dataclasses import dataclass
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) if '__file__' in globals() else os.getcwd()
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
 
 import numpy as np
 import pandas as pd
@@ -17,8 +22,8 @@ import tensorflow as tf
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
-from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
-from tensorflow.keras.layers import (
+from keras.callbacks import EarlyStopping, ReduceLROnPlateau
+from keras.layers import (
     Bidirectional,
     Concatenate,
     Dense,
@@ -30,11 +35,12 @@ from tensorflow.keras.layers import (
     LSTM,
     SpatialDropout1D,
 )
-from tensorflow.keras.models import Model, load_model
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-from tensorflow.keras.preprocessing.text import Tokenizer
+from keras.models import Model, load_model
+from keras.optimizers import Adam
+from keras.src.legacy.preprocessing.text import Tokenizer
+from keras.utils import pad_sequences
 
-from text_preprocessing import ID_TO_LABEL, LABEL_MAPPING, clean_text
+from ml.text_preprocessing import ID_TO_LABEL, LABEL_MAPPING, clean_text
 
 try:
     from gensim.models import FastText
@@ -46,7 +52,6 @@ except ImportError:
 # ==============================================================================
 # 1. KONFIGURASI GLOBAL
 # ==============================================================================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else os.getcwd()
 ARTIFACTS_DIR = os.path.join(BASE_DIR, 'artifacts')
 os.makedirs(ARTIFACTS_DIR, exist_ok=True)
 
@@ -91,7 +96,7 @@ def load_labeled_dataset(dataset_path: str = CFG.labeled_dataset_path) -> pd.Dat
     if not os.path.exists(dataset_path):
         raise FileNotFoundError(
             f"File dataset berlabel tidak ditemukan di: {dataset_path}\n"
-            "Jalankan tahap pelabelan terlebih dahulu: `python label_dataset.py`"
+            "Jalankan tahap pelabelan terlebih dahulu: `python ml/label_dataset.py`"
         )
 
     print("=" * 70)
@@ -274,7 +279,7 @@ def build_bilstm_model(vocab_size: int, embedding_matrix: np.ndarray, cfg: Confi
     model = Model(inputs=inp, outputs=out, name='PureFastText_BiLSTM_DualPool')
     model.compile(
         loss='sparse_categorical_crossentropy',
-        optimizer=tf.keras.optimizers.Adam(learning_rate=cfg.learning_rate),
+        optimizer=Adam(learning_rate=cfg.learning_rate),
         metrics=['accuracy']
     )
     return model
