@@ -10,6 +10,12 @@ async function request(path, options) {
 }
 
 export const api = {
+  getHealth: async () => {
+    const t0 = performance.now()
+    const data = await request('/api/health')
+    const latencyMs = Math.max(1, Math.round(performance.now() - t0))
+    return { ...data, latencyMs }
+  },
   getSummary: (days = 0) => request(`/api/summary?days=${days}`),
   getTrend: (days = 30) => request(`/api/trend?days=${days}`),
   getTopWords: (limit = 15) => request(`/api/top-words?limit=${limit}`),

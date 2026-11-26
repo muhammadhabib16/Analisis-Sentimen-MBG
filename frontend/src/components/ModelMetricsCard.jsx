@@ -7,21 +7,22 @@ import {
   CartesianGrid,
   Tooltip,
 } from 'recharts'
+import { Award, Layers, Cpu, Grid3X3 } from 'lucide-react'
 import { fmtNumber, fmtPct } from '../api'
 
 const CLASSES = ['Negatif', 'Netral', 'Positif']
 
 const DOT = {
-  Positif: 'bg-emerald-600',
+  Positif: 'bg-emerald-500',
   Netral: 'bg-amber-500',
-  Negatif: 'bg-rose-600',
+  Negatif: 'bg-rose-500',
 }
 
 export default function ModelMetricsCard({ metrics }) {
   const cm = metrics?.confusion_matrix || [
-    [446, 23, 41],
-    [46, 184, 13],
-    [61, 14, 293],
+    [422, 42, 52],
+    [26, 223, 11],
+    [47, 25, 306],
   ]
   const hist = metrics?.training_history || { accuracy: [], val_accuracy: [] }
   const reportRows = CLASSES.map((name, i) => {
@@ -48,35 +49,46 @@ export default function ModelMetricsCard({ metrics }) {
   return (
     <div className="space-y-5">
       {/* Executive Metric Strip */}
-      <div className="grid grid-cols-1 divide-y divide-zinc-200 overflow-hidden rounded-lg border border-zinc-200 bg-white sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-        <div className="p-5">
-          <div className="text-[11px] font-medium tracking-wider text-zinc-500 uppercase">
-            Test Accuracy
+      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+        <div className="rounded-xl border border-blue-700/60 bg-gradient-to-br from-blue-700 via-blue-800 to-slate-900 p-5 text-white shadow-xs">
+          <div className="flex items-start justify-between">
+            <div className="text-[11px] font-semibold tracking-wider text-blue-200 uppercase">
+              Test Accuracy
+            </div>
+            <Award className="h-4.5 w-4.5 text-blue-200" />
           </div>
-          <div className="mt-1.5 font-mono text-3xl font-semibold text-zinc-950 tabular-nums">
+          <div className="mt-1.5 font-mono text-3xl font-semibold text-white tabular-nums">
             {fmtPct(testAcc)}
           </div>
-          <div className="mt-1 text-xs text-zinc-500">
+          <div className="mt-1.5 text-xs text-blue-100/85">
             Pada {fmtNumber(totalSupport)} sampel uji terisolasi (10%)
           </div>
         </div>
-        <div className="p-5">
-          <div className="text-[11px] font-medium tracking-wider text-zinc-500 uppercase">
-            Macro F1-Score
+
+        <div className="rounded-xl border border-slate-200/90 border-t-3 border-t-blue-600 bg-white p-5 shadow-2xs">
+          <div className="flex items-start justify-between">
+            <div className="text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
+              Macro F1-Score
+            </div>
+            <Layers className="h-4.5 w-4.5 text-blue-600" />
           </div>
-          <div className="mt-1.5 font-mono text-3xl font-semibold text-zinc-950 tabular-nums">
+          <div className="mt-1.5 font-mono text-3xl font-semibold text-slate-950 tabular-nums">
             {fmtPct(macroF1)}
           </div>
-          <div className="mt-1 text-xs text-zinc-500">Rata-rata seimbang seluruh 3 kelas</div>
+          <div className="mt-1.5 text-xs text-slate-500">Rata-rata seimbang seluruh 3 kelas</div>
         </div>
-        <div className="p-5">
-          <div className="text-[11px] font-medium tracking-wider text-zinc-500 uppercase">
-            Peak Validation Accuracy
+
+        <div className="rounded-xl border border-slate-200/90 border-t-3 border-t-sky-500 bg-white p-5 shadow-2xs">
+          <div className="flex items-start justify-between">
+            <div className="text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
+              Peak Validation Accuracy
+            </div>
+            <Cpu className="h-4.5 w-4.5 text-sky-600" />
           </div>
-          <div className="mt-1.5 font-mono text-3xl font-semibold text-zinc-950 tabular-nums">
+          <div className="mt-1.5 font-mono text-3xl font-semibold text-slate-950 tabular-nums">
             {fmtPct(peakVal)}
           </div>
-          <div className="mt-1 text-xs text-zinc-500">
+          <div className="mt-1.5 text-xs text-slate-500">
             EarlyStopping ({historyData.length || 0} epoch dijalankan)
           </div>
         </div>
@@ -84,73 +96,80 @@ export default function ModelMetricsCard({ metrics }) {
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
         {/* Classification Report & Confusion Matrix */}
-        <section className="rounded-lg border border-zinc-200 bg-white lg:col-span-7">
-          <div className="border-b border-zinc-200 px-5 py-4">
-            <h2 className="text-sm font-semibold text-zinc-950">Classification Report &amp; Confusion Matrix</h2>
-            <p className="mt-0.5 text-xs text-zinc-500">
-              Model Pure FastText Skip-Gram + BiLSTM (Dual Global Pooling) tanpa Lexicon Prior.
-            </p>
+        <section className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-2xs lg:col-span-7">
+          <div className="flex items-center gap-3 border-b border-slate-200/80 bg-gradient-to-r from-blue-50/70 via-slate-50/50 to-white px-5 py-4">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600/10 text-blue-700 ring-1 ring-blue-600/20">
+              <Grid3X3 className="h-4 w-4" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-slate-950">
+                Classification Report &amp; Confusion Matrix
+              </h2>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Model Pure FastText Skip-Gram + BiLSTM (Dual Global Pooling) bebas kebocoran kamus.
+              </p>
+            </div>
           </div>
 
           <div className="p-5">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-zinc-200 text-[11px] text-zinc-500 uppercase">
-                    <th className="py-2 pr-3 font-medium">Kelas</th>
-                    <th className="py-2 px-2 text-right font-medium">Precision</th>
-                    <th className="py-2 px-2 text-right font-medium">Recall</th>
-                    <th className="py-2 px-2 text-right font-medium">F1-Score</th>
-                    <th className="py-2 pl-2 text-right font-medium">Support</th>
+                  <tr className="border-b border-slate-200 text-[11px] text-slate-500 uppercase">
+                    <th className="py-2 pr-3 font-semibold">Kelas</th>
+                    <th className="py-2 px-2 text-right font-semibold">Precision</th>
+                    <th className="py-2 px-2 text-right font-semibold">Recall</th>
+                    <th className="py-2 px-2 text-right font-semibold">F1-Score</th>
+                    <th className="py-2 pl-2 text-right font-semibold">Support</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-100 font-mono tabular-nums">
+                <tbody className="divide-y divide-slate-100 font-mono tabular-nums">
                   {reportRows.map((r) => (
-                    <tr key={r.name}>
+                    <tr key={r.name} className="hover:bg-blue-50/30">
                       <td className="py-2.5 pr-3 font-sans">
-                        <span className="inline-flex items-center gap-2 font-medium text-zinc-900">
+                        <span className="inline-flex items-center gap-2 font-medium text-slate-900">
                           <span className={`h-2 w-2 rounded-full ${DOT[r.name]}`} />
                           {r.name}
                         </span>
                       </td>
-                      <td className="py-2.5 px-2 text-right text-zinc-700">{r.precision.toFixed(4)}</td>
-                      <td className="py-2.5 px-2 text-right text-zinc-700">{r.recall.toFixed(4)}</td>
-                      <td className="py-2.5 px-2 text-right font-semibold text-zinc-950">
+                      <td className="py-2.5 px-2 text-right text-slate-700">{r.precision.toFixed(4)}</td>
+                      <td className="py-2.5 px-2 text-right text-slate-700">{r.recall.toFixed(4)}</td>
+                      <td className="py-2.5 px-2 text-right font-semibold text-blue-800">
                         {r.f1.toFixed(4)}
                       </td>
-                      <td className="py-2.5 pl-2 text-right text-zinc-500">{fmtNumber(r.support)}</td>
+                      <td className="py-2.5 pl-2 text-right text-slate-500">{fmtNumber(r.support)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
 
-            <div className="mt-6 border-t border-zinc-200 pt-5">
-              <div className="mb-3 text-[11px] font-medium tracking-wider text-zinc-500 uppercase">
+            <div className="mt-6 border-t border-slate-200 pt-5">
+              <div className="mb-3 text-[11px] font-semibold tracking-wider text-blue-900 uppercase">
                 Confusion Matrix (Baris: Aktual · Kolom: Prediksi)
               </div>
               <div className="grid grid-cols-4 gap-1.5 text-center text-xs">
                 <div />
                 {CLASSES.map((c) => (
-                  <div key={c} className="pb-1 text-[11px] font-medium text-zinc-500">
+                  <div key={c} className="pb-1 text-[11px] font-semibold text-slate-500">
                     {c}
                   </div>
                 ))}
                 {cm.map((row, i) => (
                   <div key={CLASSES[i]} className="contents">
-                    <div className="flex items-center justify-end pr-2 text-[11px] font-medium text-zinc-600">
+                    <div className="flex items-center justify-end pr-2 text-[11px] font-semibold text-slate-600">
                       {CLASSES[i]}
                     </div>
                     {row.map((val, j) => {
                       const ratio = val / maxCell
-                      const alpha = 0.06 + 0.84 * ratio
-                      const dark = ratio > 0.45
+                      const alpha = 0.08 + 0.84 * ratio
+                      const dark = ratio > 0.42
                       return (
                         <div
                           key={`${i}-${j}`}
-                          style={{ backgroundColor: `rgba(24, 24, 27, ${alpha.toFixed(2)})` }}
-                          className={`rounded py-2.5 font-mono font-semibold tabular-nums ${
-                            dark ? 'text-white' : 'text-zinc-800'
+                          style={{ backgroundColor: `rgba(30, 64, 175, ${alpha.toFixed(2)})` }}
+                          className={`rounded-md py-2.5 font-mono font-semibold ring-1 ring-blue-900/10 tabular-nums ${
+                            dark ? 'text-white' : 'text-blue-950'
                           }`}
                         >
                           {val}
@@ -165,13 +184,18 @@ export default function ModelMetricsCard({ metrics }) {
         </section>
 
         {/* Training Curve & Architecture Spec */}
-        <section className="flex flex-col justify-between rounded-lg border border-zinc-200 bg-white lg:col-span-5">
+        <section className="flex flex-col justify-between overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-2xs lg:col-span-5">
           <div>
-            <div className="border-b border-zinc-200 px-5 py-4">
-              <h2 className="text-sm font-semibold text-zinc-950">Kurva Pelatihan &amp; Spesifikasi</h2>
-              <p className="mt-0.5 text-xs text-zinc-500">
-                Akurasi Training vs Validation per epoch (%).
-              </p>
+            <div className="flex items-center gap-3 border-b border-slate-200/80 bg-gradient-to-r from-blue-50/70 via-slate-50/50 to-white px-5 py-4">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600/10 text-blue-700 ring-1 ring-blue-600/20">
+                <Cpu className="h-4 w-4" />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-slate-950">Kurva Pelatihan &amp; Spesifikasi</h2>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Akurasi Training vs Validation per epoch (%).
+                </p>
+              </div>
             </div>
 
             <div className="p-5">
@@ -179,53 +203,71 @@ export default function ModelMetricsCard({ metrics }) {
                 <div className="h-52 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={historyData} margin={{ top: 6, right: 10, left: -18, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="2 3" vertical={false} stroke="#e4e4e7" />
-                      <XAxis dataKey="epoch" axisLine={{ stroke: '#e4e4e7' }} tickLine={false} tick={{ fontSize: 11, fill: '#71717a' }} />
-                      <YAxis domain={[50, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#71717a' }} />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                      <XAxis
+                        dataKey="epoch"
+                        axisLine={{ stroke: '#cbd5e1' }}
+                        tickLine={false}
+                        tick={{ fontSize: 11, fill: '#64748b' }}
+                      />
+                      <YAxis
+                        domain={[50, 100]}
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 11, fill: '#64748b' }}
+                      />
                       <Tooltip
                         formatter={(v) => `${v}%`}
                         contentStyle={{
-                          backgroundColor: '#18181b',
-                          border: 'none',
-                          borderRadius: '6px',
-                          color: '#fafafa',
+                          backgroundColor: '#0f172a',
+                          border: '1px solid #1e293b',
+                          borderRadius: '8px',
+                          color: '#f8fafc',
                           fontSize: '12px',
                         }}
                       />
-                      <Line type="monotone" dataKey="Train" stroke="#18181b" strokeWidth={2} dot={{ r: 2.5 }} />
+                      <Line
+                        type="monotone"
+                        dataKey="Train"
+                        stroke="#1d4ed8"
+                        strokeWidth={2.25}
+                        dot={{ r: 2.5, fill: '#1d4ed8' }}
+                      />
                       <Line
                         type="monotone"
                         dataKey="Val"
-                        stroke="#dc2626"
+                        stroke="#0ea5e9"
                         strokeWidth={2}
                         strokeDasharray="4 4"
-                        dot={{ r: 2.5 }}
+                        dot={{ r: 2.5, fill: '#0ea5e9' }}
                       />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
               )}
 
-              <dl className="mt-5 space-y-2.5 border-t border-zinc-200 pt-4 text-xs">
+              <dl className="mt-5 space-y-2.5 border-t border-slate-200 pt-4 text-xs">
                 <div className="flex justify-between gap-4">
-                  <dt className="text-zinc-500">Embedding</dt>
-                  <dd className="text-right font-medium text-zinc-900">Pure FastText Skip-Gram (128d)</dd>
+                  <dt className="text-slate-500">Embedding</dt>
+                  <dd className="rounded bg-blue-50 px-2 py-0.5 text-right font-medium text-blue-900">
+                    Pure FastText Skip-Gram (128d)
+                  </dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt className="text-zinc-500">Arsitektur</dt>
-                  <dd className="text-right font-medium text-zinc-900">BiLSTM(128) + Dual Pool + Dense(64)</dd>
+                  <dt className="text-slate-500">Arsitektur</dt>
+                  <dd className="text-right font-medium text-slate-900">BiLSTM(128) + Dual Pool + Dense(64)</dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt className="text-zinc-500">Regularisasi</dt>
-                  <dd className="text-right font-medium text-zinc-900">SpatialDropout 0.20 · Dropout 0.30</dd>
+                  <dt className="text-slate-500">Regularisasi</dt>
+                  <dd className="text-right font-medium text-slate-900">SpatialDropout 0.20 · Dropout 0.30</dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt className="text-zinc-500">Preprocessing</dt>
-                  <dd className="text-right font-medium text-zinc-900">Netral + Syntactic Negation Binding</dd>
+                  <dt className="text-slate-500">Preprocessing</dt>
+                  <dd className="text-right font-medium text-slate-900">Netral + Syntactic Negation Binding</dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt className="text-zinc-500">Optimizer</dt>
-                  <dd className="text-right font-medium text-zinc-900">Adam (lr 0.001) · Balanced Weights</dd>
+                  <dt className="text-slate-500">Optimizer</dt>
+                  <dd className="text-right font-medium text-slate-900">Adam (lr 0.001) · Balanced Weights</dd>
                 </div>
               </dl>
             </div>
