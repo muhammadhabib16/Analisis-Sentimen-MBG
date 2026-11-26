@@ -6,23 +6,22 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
 } from 'recharts'
 import { fmtNumber, fmtPct } from '../api'
 
 const CLASSES = ['Negatif', 'Netral', 'Positif']
 
-const PILL = {
-  Positif: 'bg-emerald-100 text-emerald-800',
-  Netral: 'bg-amber-100 text-amber-800',
-  Negatif: 'bg-rose-100 text-rose-800',
+const DOT = {
+  Positif: 'bg-emerald-600',
+  Netral: 'bg-amber-500',
+  Negatif: 'bg-rose-600',
 }
 
 export default function ModelMetricsCard({ metrics }) {
   const cm = metrics?.confusion_matrix || [
-    [434, 33, 43],
-    [37, 190, 16],
-    [57, 24, 287],
+    [446, 23, 41],
+    [46, 184, 13],
+    [61, 14, 293],
   ]
   const hist = metrics?.training_history || { accuracy: [], val_accuracy: [] }
   const reportRows = CLASSES.map((name, i) => {
@@ -36,6 +35,7 @@ export default function ModelMetricsCard({ metrics }) {
 
   const totalSupport = reportRows.reduce((a, r) => a + r.support, 0)
   const testAcc = (metrics?.test_accuracy || 0) * 100
+  const macroF1 = (metrics?.classification_report?.['macro avg']?.['f1-score'] || 0) * 100
   const peakVal = hist.val_accuracy?.length ? Math.max(...hist.val_accuracy) * 100 : 0
   const maxCell = Math.max(1, ...cm.flat())
 
@@ -46,133 +46,192 @@ export default function ModelMetricsCard({ metrics }) {
   }))
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900">Performa Model Pure FastText + BiLSTM</h2>
-          <p className="text-sm text-slate-500">
-            Evaluasi pada 10% Data Uji (Test Split) yang terisolasi tanpa kebocoran kamus.
-          </p>
+    <div className="space-y-5">
+      {/* Executive Metric Strip */}
+      <div className="grid grid-cols-1 divide-y divide-zinc-200 overflow-hidden rounded-lg border border-zinc-200 bg-white sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <div className="p-5">
+          <div className="text-[11px] font-medium tracking-wider text-zinc-500 uppercase">
+            Test Accuracy
+          </div>
+          <div className="mt-1.5 font-mono text-3xl font-semibold text-zinc-950 tabular-nums">
+            {fmtPct(testAcc)}
+          </div>
+          <div className="mt-1 text-xs text-zinc-500">
+            Pada {fmtNumber(totalSupport)} sampel uji terisolasi (10%)
+          </div>
         </div>
-        <div className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-right">
-          <div className="text-2xl font-extrabold text-indigo-700">{fmtPct(testAcc)}</div>
-          <div className="text-[11px] font-medium text-indigo-600">
-            {fmtNumber(totalSupport)} uji · Peak Val {fmtPct(peakVal)}
+        <div className="p-5">
+          <div className="text-[11px] font-medium tracking-wider text-zinc-500 uppercase">
+            Macro F1-Score
+          </div>
+          <div className="mt-1.5 font-mono text-3xl font-semibold text-zinc-950 tabular-nums">
+            {fmtPct(macroF1)}
+          </div>
+          <div className="mt-1 text-xs text-zinc-500">Rata-rata seimbang seluruh 3 kelas</div>
+        </div>
+        <div className="p-5">
+          <div className="text-[11px] font-medium tracking-wider text-zinc-500 uppercase">
+            Peak Validation Accuracy
+          </div>
+          <div className="mt-1.5 font-mono text-3xl font-semibold text-zinc-950 tabular-nums">
+            {fmtPct(peakVal)}
+          </div>
+          <div className="mt-1 text-xs text-zinc-500">
+            EarlyStopping ({historyData.length || 0} epoch dijalankan)
           </div>
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs">
-          <thead>
-            <tr className="border-b border-slate-200 text-slate-500">
-              <th className="py-2 pr-3 font-semibold">Kelas</th>
-              <th className="py-2 px-2 text-right font-semibold">Precision</th>
-              <th className="py-2 px-2 text-right font-semibold">Recall</th>
-              <th className="py-2 px-2 text-right font-semibold">F1-Score</th>
-              <th className="py-2 pl-2 text-right font-semibold">Support</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {reportRows.map((r) => (
-              <tr key={r.name}>
-                <td className="py-2 pr-3">
-                  <span className={`rounded-full px-2.5 py-0.5 font-semibold ${PILL[r.name]}`}>
-                    {r.name}
-                  </span>
-                </td>
-                <td className="py-2 px-2 text-right font-mono">{r.precision.toFixed(4)}</td>
-                <td className="py-2 px-2 text-right font-mono">{r.recall.toFixed(4)}</td>
-                <td className="py-2 px-2 text-right font-mono font-semibold">{r.f1.toFixed(4)}</td>
-                <td className="py-2 pl-2 text-right font-mono">{fmtNumber(r.support)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+        {/* Classification Report & Confusion Matrix */}
+        <section className="rounded-lg border border-zinc-200 bg-white lg:col-span-7">
+          <div className="border-b border-zinc-200 px-5 py-4">
+            <h2 className="text-sm font-semibold text-zinc-950">Classification Report &amp; Confusion Matrix</h2>
+            <p className="mt-0.5 text-xs text-zinc-500">
+              Model Pure FastText Skip-Gram + BiLSTM (Dual Global Pooling) tanpa Lexicon Prior.
+            </p>
+          </div>
 
-      <div className="mt-5">
-        <h3 className="mb-2 text-xs font-semibold text-slate-700">
-          Confusion Matrix (Baris: Aktual · Kolom: Prediksi)
-        </h3>
-        <div className="grid grid-cols-4 gap-1.5 text-center text-xs">
-          <div />
-          {CLASSES.map((c) => (
-            <div key={c} className="font-semibold text-slate-500">
-              {c}
+          <div className="p-5">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-zinc-200 text-[11px] text-zinc-500 uppercase">
+                    <th className="py-2 pr-3 font-medium">Kelas</th>
+                    <th className="py-2 px-2 text-right font-medium">Precision</th>
+                    <th className="py-2 px-2 text-right font-medium">Recall</th>
+                    <th className="py-2 px-2 text-right font-medium">F1-Score</th>
+                    <th className="py-2 pl-2 text-right font-medium">Support</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100 font-mono tabular-nums">
+                  {reportRows.map((r) => (
+                    <tr key={r.name}>
+                      <td className="py-2.5 pr-3 font-sans">
+                        <span className="inline-flex items-center gap-2 font-medium text-zinc-900">
+                          <span className={`h-2 w-2 rounded-full ${DOT[r.name]}`} />
+                          {r.name}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-2 text-right text-zinc-700">{r.precision.toFixed(4)}</td>
+                      <td className="py-2.5 px-2 text-right text-zinc-700">{r.recall.toFixed(4)}</td>
+                      <td className="py-2.5 px-2 text-right font-semibold text-zinc-950">
+                        {r.f1.toFixed(4)}
+                      </td>
+                      <td className="py-2.5 pl-2 text-right text-zinc-500">{fmtNumber(r.support)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          ))}
-          {cm.map((row, i) => (
-            <div key={CLASSES[i]} className="contents">
-              <div className="flex items-center justify-end pr-2 font-semibold text-slate-600">
-                {CLASSES[i]}
+
+            <div className="mt-6 border-t border-zinc-200 pt-5">
+              <div className="mb-3 text-[11px] font-medium tracking-wider text-zinc-500 uppercase">
+                Confusion Matrix (Baris: Aktual · Kolom: Prediksi)
               </div>
-              {row.map((val, j) => {
-                const alpha = 0.08 + (0.82 * val) / maxCell
-                const dark = val / maxCell > 0.45
-                return (
-                  <div
-                    key={`${i}-${j}`}
-                    style={{ backgroundColor: `rgba(79, 70, 229, ${alpha.toFixed(2)})` }}
-                    className={`rounded-lg py-2 font-mono font-bold ${
-                      dark ? 'text-white' : 'text-slate-800'
-                    }`}
-                  >
-                    {val}
+              <div className="grid grid-cols-4 gap-1.5 text-center text-xs">
+                <div />
+                {CLASSES.map((c) => (
+                  <div key={c} className="pb-1 text-[11px] font-medium text-zinc-500">
+                    {c}
                   </div>
-                )
-              })}
+                ))}
+                {cm.map((row, i) => (
+                  <div key={CLASSES[i]} className="contents">
+                    <div className="flex items-center justify-end pr-2 text-[11px] font-medium text-zinc-600">
+                      {CLASSES[i]}
+                    </div>
+                    {row.map((val, j) => {
+                      const ratio = val / maxCell
+                      const alpha = 0.06 + 0.84 * ratio
+                      const dark = ratio > 0.45
+                      return (
+                        <div
+                          key={`${i}-${j}`}
+                          style={{ backgroundColor: `rgba(24, 24, 27, ${alpha.toFixed(2)})` }}
+                          className={`rounded py-2.5 font-mono font-semibold tabular-nums ${
+                            dark ? 'text-white' : 'text-zinc-800'
+                          }`}
+                        >
+                          {val}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
-        </div>
-      </div>
-
-      {historyData.length > 0 && (
-        <div className="mt-5">
-          <h3 className="mb-2 text-xs font-semibold text-slate-700">
-            Kurva Akurasi Training vs Validation (%)
-          </h3>
-          <div className="h-44 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={historyData} margin={{ top: 4, right: 12, left: -16, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="epoch" tick={{ fontSize: 11, fill: '#64748b' }} />
-                <YAxis domain={[50, 100]} tick={{ fontSize: 11, fill: '#64748b' }} />
-                <Tooltip formatter={(v) => `${v}%`} />
-                <Legend wrapperStyle={{ fontSize: '11px' }} />
-                <Line type="monotone" dataKey="Train" stroke="#4f46e5" strokeWidth={2} dot={{ r: 2.5 }} />
-                <Line
-                  type="monotone"
-                  dataKey="Val"
-                  stroke="#f43f5e"
-                  strokeWidth={2}
-                  strokeDasharray="4 4"
-                  dot={{ r: 2.5 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
           </div>
-        </div>
-      )}
+        </section>
 
-      <dl className="mt-5 grid grid-cols-1 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-xs sm:grid-cols-2">
-        <div>
-          <dt className="font-semibold text-slate-500">Embedding</dt>
-          <dd className="text-slate-800">Pure FastText Skip-Gram (sg=1, 128 dim, tanpa Lexicon Prior)</dd>
-        </div>
-        <div>
-          <dt className="font-semibold text-slate-500">Arsitektur</dt>
-          <dd className="text-slate-800">SpatialDropout(0.20) → BiLSTM(128) → Dual Pool → Dense(64)</dd>
-        </div>
-        <div>
-          <dt className="font-semibold text-slate-500">Preprocessing NLP</dt>
-          <dd className="text-slate-800">Normalisasi Slang &amp; Syntactic Negation Binding (tanpa kamus)</dd>
-        </div>
-        <div>
-          <dt className="font-semibold text-slate-500">Optimizer</dt>
-          <dd className="text-slate-800">Adam (lr 0.001 + ReduceLROnPlateau), Batch 32</dd>
-        </div>
-      </dl>
-    </section>
+        {/* Training Curve & Architecture Spec */}
+        <section className="flex flex-col justify-between rounded-lg border border-zinc-200 bg-white lg:col-span-5">
+          <div>
+            <div className="border-b border-zinc-200 px-5 py-4">
+              <h2 className="text-sm font-semibold text-zinc-950">Kurva Pelatihan &amp; Spesifikasi</h2>
+              <p className="mt-0.5 text-xs text-zinc-500">
+                Akurasi Training vs Validation per epoch (%).
+              </p>
+            </div>
+
+            <div className="p-5">
+              {historyData.length > 0 && (
+                <div className="h-52 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={historyData} margin={{ top: 6, right: 10, left: -18, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="2 3" vertical={false} stroke="#e4e4e7" />
+                      <XAxis dataKey="epoch" axisLine={{ stroke: '#e4e4e7' }} tickLine={false} tick={{ fontSize: 11, fill: '#71717a' }} />
+                      <YAxis domain={[50, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#71717a' }} />
+                      <Tooltip
+                        formatter={(v) => `${v}%`}
+                        contentStyle={{
+                          backgroundColor: '#18181b',
+                          border: 'none',
+                          borderRadius: '6px',
+                          color: '#fafafa',
+                          fontSize: '12px',
+                        }}
+                      />
+                      <Line type="monotone" dataKey="Train" stroke="#18181b" strokeWidth={2} dot={{ r: 2.5 }} />
+                      <Line
+                        type="monotone"
+                        dataKey="Val"
+                        stroke="#dc2626"
+                        strokeWidth={2}
+                        strokeDasharray="4 4"
+                        dot={{ r: 2.5 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              <dl className="mt-5 space-y-2.5 border-t border-zinc-200 pt-4 text-xs">
+                <div className="flex justify-between gap-4">
+                  <dt className="text-zinc-500">Embedding</dt>
+                  <dd className="text-right font-medium text-zinc-900">Pure FastText Skip-Gram (128d)</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-zinc-500">Arsitektur</dt>
+                  <dd className="text-right font-medium text-zinc-900">BiLSTM(128) + Dual Pool + Dense(64)</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-zinc-500">Regularisasi</dt>
+                  <dd className="text-right font-medium text-zinc-900">SpatialDropout 0.20 · Dropout 0.30</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-zinc-500">Preprocessing</dt>
+                  <dd className="text-right font-medium text-zinc-900">Netral + Syntactic Negation Binding</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-zinc-500">Optimizer</dt>
+                  <dd className="text-right font-medium text-zinc-900">Adam (lr 0.001) · Balanced Weights</dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
   )
 }
