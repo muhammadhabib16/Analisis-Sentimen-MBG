@@ -196,16 +196,35 @@ def score_sentiment_lexicon(text: str) -> str:
     return 'Netral'
 
 
-def load_and_merge_raw_datasets(dataset_dir: str = DATASET_DIR) -> pd.DataFrame:
-    """Memuat kedua dataset CSV mentah, menggabungkan metadata, dan menghapus duplikat."""
+MBG_TOPIC_REGEX = r'\b(?:mbg|makan|bergizi|gizi|gratis|katering|dapur|porsi|menu|keracunan|basi|siswa|sekolah|susu|anggaran|program)\b'
+OFFTOPIC_TIO_REGEX = r'\b(?:tio|tyo|bem|ugm|mahasiswa|ketua)\b'
+
+
+def parse_twitter_date(val) -> str:
+    """Mengonversi format tanggal X/Twitter ('Mon Feb 10 15:00:22 +0000 2025') ke ISO-8601."""
+    if pd.isna(val) or not str(val).strip():
+        return ''
+    dt = pd.to_datetime(val, format='%a %b %d %H:%M:%S %z %Y', errors='coerce')
+    if pd.isna(dt):
+        dt = pd.to_datetime(val, errors='coerce')
+    return dt.strftime('%Y-%m-%dT%H:%M:%SZ') if not pd.isna(dt) else str(val)
+
+
+def load_and_merge_raw_datasets(
+    dataset_dir: str = DATASET_DIR,
+    drop_offtopic_tio: bool = True,
+    strict_mbg: bool = False,
+) -> pd.DataFrame:
+    """Memuat seluruh dataset CSV mentah (YouTube + X/Twitter), menggabungkan metadata, menyaring noise, dan menghapus duplikat."""
     file_df1 = os.path.join(dataset_dir, 'MBG_sentiment_analysis.csv')
     file_df2 = os.path.join(dataset_dir, 'komentar-mbg.csv')
+    file_df3 = os.path.join(dataset_dir, 'DatasetMBG.csv')
 
     df1 = pd.read_csv(file_df1)
     df2 = pd.read_csv(file_df2)
 
     print("=" * 70)
-    print("1. LOAD & DEDUPLIKASI DATASET MENTAH")
+    print("1. LOAD, FILTER NOISE, & DEDUPLIKASI DATASET MENTAH")
     print("=" * 70)
     print(f"Dataset 1 (MBG_sentiment_analysis.csv) : {df1.shape[0]} baris")
     print(f"Dataset 2 (komentar-mbg.csv)           : {df2.shape[0]} baris")
@@ -231,7 +250,7 @@ def load_and_merge_raw_datasets(dataset_dir: str = DATASET_DIR) -> pd.DataFrame:
     df2_only['text_bersih'] = df2_only['comment'].apply(clean_text)
     df2_only = df2_only[(df2_only['text_for_labeling'] != '') & (df2_only['text_bersih'] != '')]
 
-    df_gabung = pd.concat([
+    frames = [
         pd.DataFrame({
             'author': df1_merged['author'].fillna('@anonim'),
             'comment_asli': df1_merged['comment'],
@@ -239,7 +258,7 @@ def load_and_merge_raw_datasets(dataset_dir: str = DATASET_DIR) -> pd.DataFrame:
             'text_for_labeling': df1_merged['text_for_labeling'],
             'published_at': df1_merged['published_at'],
             'likes': df1_merged['likes'].fillna(0).astype(int),
-            'sumber': 'dataset_1',
+            'sumber': 'youtube_1',
         }),
         pd.DataFrame({
             'author': df2_only['author'].fillna('@anonim'),
@@ -248,19 +267,60 @@ def load_and_merge_raw_datasets(dataset_dir: str = DATASET_DIR) -> pd.DataFrame:
             'text_for_labeling': df2_only['text_for_labeling'],
             'published_at': df2_only['published_at'],
             'likes': df2_only['likes'].fillna(0).astype(int),
-            'sumber': 'dataset_2',
+            'sumber': 'youtube_2',
         }),
-    ], ignore_index=True)
+    ]
 
+    if os.path.exists(file_df3):
+        df3 = pd.read_csv(file_df3)
+        print(f"Dataset 3 (DatasetMBG.csv / X-Twitter) : {df3.shape[0]} baris")
+        df3_valid = df3.dropna(subset=['full_text']).copy()
+        df3_valid['text_for_labeling'] = df3_valid['full_text'].apply(lambda t: bind_negations_for_labeling(clean_text_basic(t)))
+        df3_valid['text_bersih'] = df3_valid['full_text'].apply(clean_text)
+        df3_valid = df3_valid[(df3_valid['text_for_labeling'] != '') & (df3_valid['text_bersih'] != '')]
+        authors_tw = df3_valid['username'].fillna('anonim').astype(str).apply(lambda u: u if u.startswith('@') else f'@{u}')
+        frames.append(pd.DataFrame({
+            'author': authors_tw,
+            'comment_asli': df3_valid['full_text'],
+            'text_bersih': df3_valid['text_bersih'],
+            'text_for_labeling': df3_valid['text_for_labeling'],
+            'published_at': df3_valid['created_at'].apply(parse_twitter_date),
+            'likes': df3_valid['favorite_count'].fillna(0).astype(int),
+            'sumber': 'twitter_mbg',
+        }))
+
+    df_gabung = pd.concat(frames, ignore_index=True)
     df_gabung = df_gabung.drop_duplicates(subset=['text_bersih']).reset_index(drop=True)
+
+    txt_lower = df_gabung['comment_asli'].astype(str).str.lower()
+    has_mbg = txt_lower.str.contains(MBG_TOPIC_REGEX, regex=True)
+    has_tio = txt_lower.str.contains(OFFTOPIC_TIO_REGEX, regex=True)
+
+    if strict_mbg:
+        before = len(df_gabung)
+        df_gabung = df_gabung[has_mbg].reset_index(drop=True)
+        print(f"Filter --strict-mbg                    : {before} -> {len(df_gabung)} baris (100% eksplisit MBG)")
+    elif drop_offtopic_tio:
+        before = len(df_gabung)
+        df_gabung = df_gabung[~(has_tio & ~has_mbg)].reset_index(drop=True)
+        print(f"Filter noise Tio/BEM (tanpa MBG)       : dibuang {before - len(df_gabung)} baris -> {len(df_gabung)} baris")
+
     df_gabung.insert(0, 'id', range(1, len(df_gabung) + 1))
     print(f"Total data unik siap dilabeli          : {len(df_gabung)} baris")
     return df_gabung
 
 
-def run_labeling(output_path: str = DEFAULT_OUTPUT_PATH) -> pd.DataFrame:
-    """Menjalankan pelabelan dataset dan menyimpannya ke CSV agar siap dilatih oleh `script.py`."""
-    df = load_and_merge_raw_datasets(DATASET_DIR)
+def run_labeling(
+    output_path: str = DEFAULT_OUTPUT_PATH,
+    drop_offtopic_tio: bool = True,
+    strict_mbg: bool = False,
+) -> pd.DataFrame:
+    """Menjalankan pelabelan dataset dan menyimpannya ke CSV agar siap dilatih oleh `ml/script.py`."""
+    df = load_and_merge_raw_datasets(
+        DATASET_DIR,
+        drop_offtopic_tio=drop_offtopic_tio,
+        strict_mbg=strict_mbg,
+    )
 
     print("\n" + "=" * 70)
     print("2. PELABELAN OTOMATIS (LEKSIKON + NEGASI)")
@@ -296,9 +356,23 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_OUTPUT_PATH,
         help=f"Path output CSV berlabel (default: {DEFAULT_OUTPUT_PATH})"
     )
+    parser.add_argument(
+        '--strict-mbg',
+        action='store_true',
+        help="Hanya simpan komentar yang secara eksplisit menyebut kata kunci topik MBG."
+    )
+    parser.add_argument(
+        '--keep-offtopic-tio',
+        action='store_true',
+        help="Pertahankan komentar Tio/BEM yang tidak menyebut MBG."
+    )
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    run_labeling(output_path=args.output)
+    run_labeling(
+        output_path=args.output,
+        drop_offtopic_tio=not args.keep_offtopic_tio,
+        strict_mbg=args.strict_mbg,
+    )
