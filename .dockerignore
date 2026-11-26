@@ -8,9 +8,7 @@ __pycache__/
 docs/
 kamus/
 sentimen mbg dataset/
-frontend/node_modules/
-frontend/dist/
-frontend/.vite/
+frontend/
 Dashboard Sentimen MBG.html
 CONTEXT.md
 README.md

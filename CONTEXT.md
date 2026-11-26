@@ -116,27 +116,30 @@ TB ML/
 
 ## 6. Performa Model Terkini (Eksperimen 6 — Terpilih)
 
-- **Test Accuracy (`n = 1.121`):** **`81,27%`** (`0.8127`)
-- **Macro F1-Score:** **`80,52%`** (`0.8052`)
-- **Peak Validation Accuracy:** **`82,05%`** pada Epoch 6 (berhenti di Epoch 10; *train accuracy* naik bertahap `63,02%` → `97,59%`)
+- **Test Accuracy (`n = 1.121`):** **`82,34%`** (`0.8234`)
+- **Macro F1-Score:** **`81,73%`** (`0.8173`)
+- **Peak Validation Accuracy:** **`81,34%`** pada Epoch 4 (berhenti di Epoch 8; *train accuracy* naik bertahap `63,45%` → `96,93%`)
 - **Per Kelas (`artifacts/model_metrics.json`):**
-  - **Negatif (`510`):** Precision `0,8220` | Recall `0,8510` | F1 `0,8362`
-  - **Netral (`243`):** Precision `0,7692` | Recall `0,7819` | F1 `0,7755`
-  - **Positif (`368`):** Precision `0,8295` | Recall `0,7799` | F1 `0,8039`
+  - **Negatif (`510`):** Precision `0,8065` | Recall `0,8745` | F1 `0,8391`
+  - **Netral (`243`):** Precision `0,8326` | Recall `0,7572` | F1 `0,7931`
+  - **Positif (`368`):** Precision `0,8444` | Recall `0,7962` | F1 `0,8196`
 - **Confusion Matrix (`Test Set = 1.121`):**
-  - Aktual Negatif: `[434, 33, 43]` | Aktual Netral: `[37, 190, 16]` | Aktual Positif: `[57, 24, 287]`
+  - Aktual Negatif: `[446, 23, 41]` | Aktual Netral: `[46, 184, 13]` | Aktual Positif: `[61, 14, 293]`
 - **Distribusi Prediksi di SQLite (`artifacts/dashboard_mbg.db`, `11.202` baris):**
-  - Positif: `3.600` (`32,14%`) | Netral: `2.376` (`21,21%`) | Negatif: `5.226` (`46,65%`)
+  - Positif: `3.482` (`31,08%`) | Netral: `2.302` (`20,55%`) | Negatif: `5.418` (`48,37%`)
+- **Eksperimen Pembanding Undersampling (`dataset_seimbang_final.csv`, `4.460` data):**
+  - Test Accuracy **`71,08%`**, Macro F1 **`71,29%`** (gagal memprediksi kalimat positif MBG karena kehilangan 60% data latih & cepat *overfit*). Menegaskan bahwa `dataset_labeled.csv` penuh + `class_weight='balanced'` jauh lebih optimal.
 
 *(Catatan Audit: Eksperimen 5 sebelumnya mencapai `98,10%` di Epoch 1 karena terjadi shortcut learning dari suntikan Lexicon Prior `vec[0]`/`vec[1]`, `lexicon_corpus`, dan tag `ironi_`. Arsitektur tersebut telah digantikan oleh Eksperimen 6 yang murni belajar dari data.)*
 
 ---
 
-## 7. Endpoint REST API (`backend/app.py`)
+## 7. Endpoint REST API (`backend/app.py`) & Deployment Docker
 
 | Method | Endpoint | Fungsi |
 | :--- | :--- | :--- |
 | `GET` | `/` | Menyajikan halaman dashboard (`frontend/dist/index.html`, fallback `Dashboard Sentimen MBG.html`) |
+| `GET` | `/api/health` | Health check Docker/reverse proxy (`status`, `model_loaded`, `tokenizer_loaded`, `db_exists`) |
 | `GET` | `/api/summary?days=0` | Total komentar, jumlah & persentase per sentimen |
 | `GET` | `/api/trend?days=30` | Tren jumlah komentar harian per sentimen |
 | `GET` | `/api/top-words?limit=15` | 15 kata paling sering muncul per sentimen |
@@ -150,7 +153,15 @@ TB ML/
 
 ## 8. Cara Menjalankan
 
-1. **Jalankan Backend FastAPI + Dashboard (Mode Produksi / 1 Server):**
+1. **Docker / Homeserver (Produksi 1 Container):**
+   - Multi-stage `Dockerfile` (`node:22-alpine` → `python:3.11-slim` + `requirements-server.txt`), `docker-compose.yml` (`port 8000`, volume `./artifacts:/app/artifacts:ro`), dan `.dockerignore`.
+   ```bash
+   docker compose up -d --build
+   # atau di compose homeserver:
+   docker compose up -d --build --no-deps backend-mbg
+   ```
+
+2. **Jalankan Backend FastAPI + Dashboard Lokal (Mode Produksi / 1 Server):**
    ```powershell
    .\.venv\Scripts\python.exe backend\app.py
    ```

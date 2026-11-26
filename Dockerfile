@@ -1,19 +1,8 @@
 # ==============================================================================
-# Stage 1: Build Frontend React + Vite + Tailwind CSS
+# Dockerfile — Backend FastAPI + Pure FastText & BiLSTM Model Serving (API Only)
+# Frontend React di-deploy terpisah (mis. di Vercel) dengan env VITE_API_BASE
 # ==============================================================================
-FROM node:22-alpine AS frontend-builder
-
-WORKDIR /app/frontend
-COPY frontend/package*.json ./
-RUN npm ci
-
-COPY frontend/ ./
-RUN npm run build
-
-# ==============================================================================
-# Stage 2: Runtime Backend FastAPI + TensorFlow CPU Serving
-# ==============================================================================
-FROM python:3.11-slim AS runtime
+FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -23,16 +12,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install dependensi server ramping
+# Install dependensi server ramping (tanpa library training/plotting)
 COPY requirements-server.txt ./
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements-server.txt
 
-# Salin kode backend, pipeline inference, artefak model, dan hasil build frontend
+# Salin hanya kode backend, pipeline inference, dan artefak model
 COPY backend/ ./backend/
 COPY ml/ ./ml/
 COPY artifacts/ ./artifacts/
-COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
 EXPOSE 8000
 

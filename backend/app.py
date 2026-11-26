@@ -75,11 +75,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Izinkan akses CORS agar file HTML bisa memanggil API baik dari localhost maupun file://
+# Konfigurasi CORS (default "*", atau isi env CORS_ORIGINS="https://app-anda.vercel.app,http://localhost:5173")
+cors_origins_env = os.getenv("CORS_ORIGINS", "*").strip()
+allow_origins = ["*"] if cors_origins_env == "*" else [o.strip() for o in cors_origins_env.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=allow_origins,
+    allow_credentials=(allow_origins != ["*"]),
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -124,14 +127,19 @@ class PredictRequest(BaseModel):
 # ==============================================================================
 # ENDPOINT HALAMAN UTAMA DASHBOARD
 # ==============================================================================
-@app.get("/", response_class=HTMLResponse)
+@app.get("/")
 def serve_dashboard():
-    """Menampilkan halaman web Dashboard Sentimen MBG (prioritas build React Vite, fallback HTML statis)."""
+    """Menampilkan dashboard lokal jika tersedia, atau info status API saat mode backend-only (Docker)."""
     if os.path.exists(FRONTEND_INDEX_PATH):
         return FileResponse(FRONTEND_INDEX_PATH)
     if os.path.exists(HTML_PATH):
         return FileResponse(HTML_PATH)
-    return HTMLResponse("<h1>Frontend Dashboard tidak ditemukan.</h1>", status_code=404)
+    return {
+        "service": "API Dashboard Analisis Sentimen MBG",
+        "status": "ok",
+        "docs": "/docs",
+        "health": "/api/health",
+    }
 
 
 # ==============================================================================
