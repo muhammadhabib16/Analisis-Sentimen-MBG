@@ -1,0 +1,9 @@
+# Dependensi ramping khusus serving FastAPI + TensorFlow (tanpa library training/plotting)
+# Catatan: Untuk Linux x86_64 gunakan tensorflow-cpu; jika homeserver ARM64 (Raspberry Pi), ganti menjadi `tensorflow==2.21.0`
+fastapi==0.163.1
+uvicorn[standard]==0.54.0
+python-multipart==0.0.33
+numpy==2.4.6
+pandas==3.1.1
+tensorflow-cpu==2.21.0
+keras==3.15.1

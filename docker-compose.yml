@@ -1,0 +1,26 @@
+services:
+  mbg-dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mbg-sentiment-dashboard
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - TF_CPP_MIN_LOG_LEVEL=2
+      - OMP_NUM_THREADS=4
+    volumes:
+      # Mount read-only agar jika model/DB di-retrain di host, cukup `docker compose restart` tanpa rebuild image
+      - ./artifacts:/app/artifacts:ro
+
+  # Opsional: aktifkan Cloudflare Tunnel agar bisa diakses HTTPS dari internet tanpa port forwarding
+  # cloudflared:
+  #   image: cloudflare/cloudflared:latest
+  #   container_name: mbg-cloudflared
+  #   restart: unless-stopped
+  #   command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+  #   depends_on:
+  #     - mbg-dashboard

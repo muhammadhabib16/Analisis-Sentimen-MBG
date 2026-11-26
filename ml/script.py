@@ -19,9 +19,6 @@ if BASE_DIR not in sys.path:
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
-from sklearn.model_selection import train_test_split
-from sklearn.utils.class_weight import compute_class_weight
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from keras.layers import (
     Bidirectional,
@@ -215,6 +212,9 @@ def build_fasttext_embedding_matrix(
 
 def prepare_datasets_and_embeddings(df: pd.DataFrame, cfg: Config = CFG) -> dict:
     """Membagi data (80:10:10 Stratified), fit Tokenizer hanya pada X_train, dan membangun FastText murni."""
+    from sklearn.model_selection import train_test_split
+    from sklearn.utils.class_weight import compute_class_weight
+
     print("\n" + "=" * 70)
     print("2. SPLIT DATA (80:10:10), TOKENISASI & PURE FASTTEXT EMBEDDING")
     print("=" * 70)
@@ -305,6 +305,7 @@ def save_evaluation_plots_and_metrics(history, y_test: np.ndarray, y_pred: np.nd
     """Menyimpan grafik kurva training, confusion matrix, dan file JSON metrik untuk halaman Performa Model di Dashboard."""
     import matplotlib.pyplot as plt
     import seaborn as sns
+    from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
     axes[0].plot(history.history['accuracy'], label='Train Accuracy', marker='o')
@@ -373,6 +374,8 @@ def save_evaluation_plots_and_metrics(history, y_test: np.ndarray, y_pred: np.nd
 
 def train_and_evaluate(data_bundle: dict, cfg: Config = CFG) -> Model:
     """Melatih model BiLSTM murni, mengevaluasi performa pada Test Set, dan menyimpan artefak model."""
+    from sklearn.metrics import classification_report
+
     print("\n" + "=" * 70)
     print("3. TRAINING & EVALUASI MODEL PURE FASTTEXT + BiLSTM")
     print("=" * 70)

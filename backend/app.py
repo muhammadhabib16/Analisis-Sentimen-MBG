@@ -137,6 +137,17 @@ def serve_dashboard():
 # ==============================================================================
 # ENDPOINT REST API DASHBOARD
 # ==============================================================================
+@app.get("/api/health")
+def health_check():
+    """Health check endpoint untuk Docker / reverse proxy."""
+    return {
+        "status": "ok",
+        "model_loaded": ml_state.get("model") is not None,
+        "tokenizer_loaded": ml_state.get("tokenizer") is not None,
+        "db_exists": os.path.exists(CFG.dashboard_db_path),
+    }
+
+
 @app.get("/api/summary")
 def get_summary(days: int = Query(0, description="Filter N hari terakhir (0 = Semua data)")):
     """Mengambil total komentar dan distribusi sentimen (Positif, Netral, Negatif)."""
@@ -425,4 +436,6 @@ async def predict_batch_csv(file: UploadFile = File(...)):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000, reload=False)
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run(app, host=host, port=port, reload=False)
