@@ -116,14 +116,30 @@ def load_labeled_dataset(dataset_path: str = CFG.labeled_dataset_path) -> pd.Dat
         raise ValueError("Dataset berlabel wajib memiliki kolom 'comment_asli' (atau 'comment').")
 
     if 'sentiment_label' not in df.columns:
+        for alt in ('sentimen', 'sentiment', 'label_sentimen'):
+            if alt in df.columns:
+                df['sentiment_label'] = df[alt]
+                break
+    if 'sentiment_label' not in df.columns:
         if 'label' in df.columns and df['label'].isin(ID_TO_LABEL).all():
             df['sentiment_label'] = df['label'].map(ID_TO_LABEL)
         else:
-            raise ValueError("Dataset berlabel wajib memiliki kolom 'sentiment_label' (Positif/Netral/Negatif).")
+            raise ValueError("Dataset berlabel wajib memiliki kolom 'sentiment_label' atau 'sentimen' (Positif/Netral/Negatif).")
 
     df = df.dropna(subset=['comment_asli', 'sentiment_label']).copy()
     df['sentiment_label'] = df['sentiment_label'].astype(str).str.strip().str.capitalize()
     df = df[df['sentiment_label'].isin(LABEL_MAPPING)].copy()
+
+    # Lengkapi metadata dashboard (author, likes, published_at) dari komentar-mbg.csv bila belum ada
+    meta_cols = ('author', 'likes', 'published_at')
+    meta_source = os.path.join(CFG.dataset_dir, 'komentar-mbg.csv')
+    if any(c not in df.columns for c in meta_cols) and os.path.exists(meta_source):
+        df_meta = pd.read_csv(meta_source, usecols=['comment', 'author', 'likes', 'published_at']).dropna(subset=['comment'])
+        df_meta['comment_key'] = df_meta['comment'].astype(str).str.strip()
+        df_meta = df_meta.drop_duplicates(subset=['comment_key'])
+        df['comment_key'] = df['comment_asli'].astype(str).str.strip()
+        missing_cols = [c for c in meta_cols if c not in df.columns]
+        df = df.merge(df_meta[['comment_key', *missing_cols]], on='comment_key', how='left').drop(columns=['comment_key'])
 
     df['text_bersih'] = df['comment_asli'].apply(clean_text)
     df = df[df['text_bersih'] != ''].copy()
