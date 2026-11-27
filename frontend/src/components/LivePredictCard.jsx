@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowRight, Shuffle, Upload, Download, FileSpreadsheet, Sparkles } from 'lucide-react'
+import { ArrowRight, Shuffle, Upload, Download, FileSpreadsheet } from 'lucide-react'
 import { api, fmtNumber, fmtPct } from '../api'
 
 const SAMPLE_PROMPTS = [
@@ -9,21 +9,9 @@ const SAMPLE_PROMPTS = [
 ]
 
 const STATUS_STYLE = {
-  Positif: {
-    dot: 'bg-emerald-500',
-    badge: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20',
-    bar: 'bg-emerald-500',
-  },
-  Netral: {
-    dot: 'bg-amber-500',
-    badge: 'bg-amber-50 text-amber-700 ring-1 ring-amber-600/20',
-    bar: 'bg-amber-500',
-  },
-  Negatif: {
-    dot: 'bg-rose-500',
-    badge: 'bg-rose-50 text-rose-700 ring-1 ring-rose-600/20',
-    bar: 'bg-rose-500',
-  },
+  Positif: { dot: 'bg-[#3b8266]', text: 'text-[#2f6f55]', bar: 'bg-[#3b8266]' },
+  Netral: { dot: 'bg-[#829ab1]', text: 'text-[#486581]', bar: 'bg-[#829ab1]' },
+  Negatif: { dot: 'bg-[#c05664]', text: 'text-[#a34250]', bar: 'bg-[#c05664]' },
 }
 
 export default function LivePredictCard() {
@@ -64,7 +52,7 @@ export default function LivePredictCard() {
       const res = await api.predictSingle(text.trim())
       setResult(res)
     } catch {
-      setError('Gagal memproses analisis sentimen. Periksa ketersediaan server backend.')
+      setError('Gagal menghubungi layanan inferensi. Periksa koneksi server backend.')
     } finally {
       setLoading(false)
     }
@@ -109,17 +97,12 @@ export default function LivePredictCard() {
   return (
     <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
       {/* Single Live Inference */}
-      <section className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-2xs lg:col-span-7">
-        <div className="flex items-center gap-3 border-b border-slate-200/80 bg-gradient-to-r from-blue-50/70 via-slate-50/50 to-white px-5 py-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600/10 text-blue-700 ring-1 ring-blue-600/20">
-            <Sparkles className="h-4 w-4" />
-          </div>
-          <div>
-            <h2 className="text-sm font-semibold text-slate-950">Uji Klasifikasi Komentar Tunggal</h2>
-            <p className="mt-0.5 text-xs text-slate-500">
-              Masukkan opini publik untuk diuji langsung oleh model Pure FastText + BiLSTM.
-            </p>
-          </div>
+      <section className="overflow-hidden rounded-lg border border-[#dce4ee] bg-white lg:col-span-7">
+        <div className="border-b border-[#e4ebf3] bg-[#f8fafd] px-5 py-4">
+          <h2 className="text-sm font-semibold text-[#102a43]">Uji Klasifikasi Komentar Tunggal</h2>
+          <p className="mt-0.5 text-xs text-[#627d98]">
+            Masukkan opini publik untuk diuji secara langsung oleh model Pure FastText + BiLSTM.
+          </p>
         </div>
 
         <div className="p-5">
@@ -130,7 +113,7 @@ export default function LivePredictCard() {
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="Ketik atau tempel komentar masyarakat terkait program MBG..."
-              className="w-full rounded-lg border border-slate-300 bg-slate-50/40 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-blue-600 focus:bg-white focus:ring-3 focus:ring-blue-600/12"
+              className="w-full rounded-md border border-[#cbd6e2] bg-[#fbfcfe] px-3.5 py-2.5 text-sm text-[#102a43] placeholder:text-[#829ab1] outline-none transition focus:border-[#3b6998] focus:bg-white"
             />
 
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -138,16 +121,16 @@ export default function LivePredictCard() {
                 type="button"
                 onClick={handleRandom}
                 disabled={loadingRandom}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-blue-300 hover:bg-blue-50/50 hover:text-blue-800 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-md border border-[#cbd6e2] bg-white px-3 py-1.5 text-xs font-medium text-[#334e68] transition hover:bg-[#f4f8fc] disabled:opacity-50"
               >
-                <Shuffle className="h-3.5 w-3.5 text-blue-600" />
+                <Shuffle className="h-3.5 w-3.5 text-[#486581]" />
                 {loadingRandom ? 'Mengambil...' : 'Ambil Sampel Acak'}
               </button>
 
               <button
                 type="submit"
                 disabled={loading || !text.trim()}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-blue-700 disabled:opacity-40"
+                className="inline-flex items-center gap-1.5 rounded-md bg-[#23486e] px-4 py-1.5 text-xs font-medium text-white transition hover:bg-[#1b3957] disabled:opacity-40"
               >
                 {loading ? 'Memproses...' : 'Analisis Sentimen'}
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -156,7 +139,7 @@ export default function LivePredictCard() {
           </form>
 
           <div className="mt-4 flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] font-medium text-slate-500">Contoh cepat:</span>
+            <span className="text-[11px] text-[#829ab1]">Contoh cepat:</span>
             {SAMPLE_PROMPTS.map((sample, idx) => (
               <button
                 key={idx}
@@ -165,7 +148,7 @@ export default function LivePredictCard() {
                   setText(sample)
                   setResult(null)
                 }}
-                className="rounded-md border border-blue-200/80 bg-blue-50/60 px-2.5 py-0.5 text-[11px] font-medium text-blue-800 transition hover:border-blue-300 hover:bg-blue-100/70"
+                className="rounded border border-[#dce4ee] bg-[#f4f8fc] px-2 py-0.5 text-[11px] text-[#334e68] transition hover:border-[#c3d2e3] hover:bg-[#eaf1f8]"
               >
                 Kasus #{idx + 1}
               </button>
@@ -173,28 +156,28 @@ export default function LivePredictCard() {
           </div>
 
           {error && (
-            <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs text-rose-700">
+            <div className="mt-4 rounded-md border border-[#ebd0d4] bg-[#fcf4f5] px-3 py-2 text-xs text-[#a34250]">
               {error}
             </div>
           )}
 
           {result && (
-            <div className="mt-5 rounded-xl border border-blue-100 bg-gradient-to-br from-slate-50 to-blue-50/35 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 pb-3">
-                <span
-                  className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${STATUS_STYLE[result.sentimen].badge}`}
-                >
-                  <span className={`h-2 w-2 rounded-full ${STATUS_STYLE[result.sentimen].dot}`} />
-                  Sentimen {result.sentimen}
-                </span>
-                <span className="rounded-md bg-white px-2.5 py-1 font-mono text-xs font-semibold text-blue-900 ring-1 ring-slate-200 tabular-nums">
+            <div className="mt-5 rounded-md border border-[#dce4ee] bg-[#f8fafd] p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#e4ebf3] pb-3">
+                <div className="flex items-center gap-2">
+                  <span className={`h-2.5 w-2.5 rounded-full ${STATUS_STYLE[result.sentimen].dot}`} />
+                  <span className={`text-base font-semibold ${STATUS_STYLE[result.sentimen].text}`}>
+                    {result.sentimen}
+                  </span>
+                </div>
+                <span className="font-mono text-xs font-semibold text-[#334e68] tabular-nums">
                   Confidence {fmtPct(result.confidence_pct)}
                 </span>
               </div>
 
-              <div className="mt-3 text-xs text-slate-600">
-                <span className="font-medium text-slate-500">Token preprocessing: </span>
-                <code className="rounded bg-white px-2 py-0.5 text-[11px] text-blue-950 ring-1 ring-blue-200/70">
+              <div className="mt-3 text-xs text-[#486581]">
+                <span className="font-medium text-[#627d98]">Token preprocessing: </span>
+                <code className="rounded bg-white px-1.5 py-0.5 text-[11px] text-[#102a43] ring-1 ring-[#dce4ee]">
                   {result.teks_bersih || '-'}
                 </code>
               </div>
@@ -204,14 +187,14 @@ export default function LivePredictCard() {
                   const p = (result.probabilitas?.[cls] || 0) * 100
                   return (
                     <div key={cls} className="grid grid-cols-[58px_1fr_52px] items-center gap-2.5 text-xs">
-                      <span className="font-medium text-slate-600">{cls}</span>
-                      <div className="h-2 overflow-hidden rounded-full bg-slate-200/80">
+                      <span className="text-[#486581]">{cls}</span>
+                      <div className="h-1.5 overflow-hidden rounded-full bg-[#e4ebf3]">
                         <div
                           className={`h-full rounded-full ${STATUS_STYLE[cls].bar}`}
                           style={{ width: `${p}%` }}
                         />
                       </div>
-                      <span className="text-right font-mono font-medium text-slate-700 tabular-nums">
+                      <span className="text-right font-mono text-[#334e68] tabular-nums">
                         {fmtPct(p)}
                       </span>
                     </div>
@@ -224,29 +207,22 @@ export default function LivePredictCard() {
       </section>
 
       {/* Batch CSV Prediction */}
-      <section className="flex flex-col justify-between overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-2xs lg:col-span-5">
+      <section className="flex flex-col justify-between overflow-hidden rounded-lg border border-[#dce4ee] bg-white lg:col-span-5">
         <div>
-          <div className="flex items-center gap-3 border-b border-slate-200/80 bg-gradient-to-r from-blue-50/70 via-slate-50/50 to-white px-5 py-4">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600/10 text-blue-700 ring-1 ring-blue-600/20">
-              <FileSpreadsheet className="h-4 w-4" />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold text-slate-950">Klasifikasi Massal (Batch CSV)</h2>
-              <p className="mt-0.5 text-xs text-slate-500">
-                Unggah data survei hingga 5.000 baris untuk diprediksi sekaligus.
-              </p>
-            </div>
+          <div className="border-b border-[#e4ebf3] bg-[#f8fafd] px-5 py-4">
+            <h2 className="text-sm font-semibold text-[#102a43]">Klasifikasi Massal (Batch CSV)</h2>
+            <p className="mt-0.5 text-xs text-[#627d98]">
+              Unggah data survei atau komentar hingga 5.000 baris untuk diprediksi sekaligus.
+            </p>
           </div>
 
           <div className="p-5">
-            <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-blue-200 bg-blue-50/35 px-4 py-7 text-center transition hover:border-blue-400 hover:bg-blue-50/60">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100/80 text-blue-700">
-                <FileSpreadsheet className="h-5 w-5" />
-              </div>
-              <span className="mt-2.5 text-xs font-semibold text-slate-800">
+            <label className="flex cursor-pointer flex-col items-center justify-center rounded-md border border-dashed border-[#c5d3e2] bg-[#f7fafd] px-4 py-7 text-center transition hover:border-[#9fb3c8] hover:bg-[#f0f5fa]">
+              <FileSpreadsheet className="h-6 w-6 text-[#627d98]" />
+              <span className="mt-2 text-xs font-medium text-[#243b53]">
                 {batchFile ? batchFile.name : 'Pilih berkas .csv dari perangkat Anda'}
               </span>
-              <span className="mt-1 text-[11px] text-slate-500">
+              <span className="mt-1 text-[11px] text-[#627d98]">
                 Wajib memuat kolom <code>comment</code> / <code>komentar</code> (maks. 5 MB)
               </span>
               <input
@@ -257,12 +233,12 @@ export default function LivePredictCard() {
               />
             </label>
 
-            <div className="mt-3.5 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={handleBatch}
                 disabled={batchLoading || !batchFile}
-                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-blue-700 disabled:opacity-40"
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md bg-[#23486e] px-3.5 py-2 text-xs font-medium text-white transition hover:bg-[#1b3957] disabled:opacity-40"
               >
                 <Upload className="h-3.5 w-3.5" />
                 {batchLoading ? 'Memproses CSV...' : 'Jalankan Batch Inference'}
@@ -272,7 +248,7 @@ export default function LivePredictCard() {
                 <button
                   type="button"
                   onClick={downloadBatchCsv}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-blue-300 bg-blue-50 px-3.5 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-100"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-[#cbd6e2] bg-white px-3.5 py-2 text-xs font-medium text-[#334e68] hover:bg-[#f4f8fc]"
                 >
                   <Download className="h-3.5 w-3.5" />
                   Unduh Hasil
@@ -280,30 +256,30 @@ export default function LivePredictCard() {
               )}
             </div>
 
-            {batchError && <p className="mt-3 text-xs text-rose-600">{batchError}</p>}
+            {batchError && <p className="mt-3 text-xs text-[#a34250]">{batchError}</p>}
 
             {batchResult && (
-              <div className="mt-4 rounded-xl border border-blue-100 bg-slate-50 p-3.5 text-xs">
-                <div className="font-medium text-slate-800">
-                  Selesai: <span className="font-mono font-semibold text-blue-700">{fmtNumber(batchResult.total_predicted)}</span>{' '}
+              <div className="mt-4 rounded-md border border-[#dce4ee] bg-[#f8fafd] p-3.5 text-xs">
+                <div className="font-medium text-[#243b53]">
+                  Selesai: <span className="font-mono">{fmtNumber(batchResult.total_predicted)}</span>{' '}
                   baris (kolom <code>{batchResult.text_column}</code>)
                 </div>
-                <div className="mt-2.5 grid grid-cols-3 gap-2 border-t border-slate-200 pt-2.5 text-center font-mono tabular-nums">
-                  <div className="rounded-md bg-white py-1.5 ring-1 ring-slate-200/70">
-                    <div className="text-[10px] text-slate-500 uppercase">Positif</div>
-                    <div className="font-semibold text-emerald-600">
+                <div className="mt-2 grid grid-cols-3 gap-2 border-t border-[#e4ebf3] pt-2.5 text-center font-mono tabular-nums">
+                  <div>
+                    <div className="text-[10px] text-[#627d98] uppercase">Positif</div>
+                    <div className="font-semibold text-[#2f6f55]">
                       {fmtNumber(batchResult.summary?.Positif)}
                     </div>
                   </div>
-                  <div className="rounded-md bg-white py-1.5 ring-1 ring-slate-200/70">
-                    <div className="text-[10px] text-slate-500 uppercase">Netral</div>
-                    <div className="font-semibold text-amber-600">
+                  <div>
+                    <div className="text-[10px] text-[#627d98] uppercase">Netral</div>
+                    <div className="font-semibold text-[#486581]">
                       {fmtNumber(batchResult.summary?.Netral)}
                     </div>
                   </div>
-                  <div className="rounded-md bg-white py-1.5 ring-1 ring-slate-200/70">
-                    <div className="text-[10px] text-slate-500 uppercase">Negatif</div>
-                    <div className="font-semibold text-rose-600">
+                  <div>
+                    <div className="text-[10px] text-[#627d98] uppercase">Negatif</div>
+                    <div className="font-semibold text-[#a34250]">
                       {fmtNumber(batchResult.summary?.Negatif)}
                     </div>
                   </div>
